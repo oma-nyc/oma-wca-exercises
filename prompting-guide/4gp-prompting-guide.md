@@ -166,16 +166,21 @@ Generate a top-level play called ibm-mq-day0-playbook.yml that runs this role on
 
 **Write down your good prompts!** It's good practice to create a simple `prompts.md` file to keep your prompts in after they are producing good results. You can use them to test updated LLMs as well.
 
-## Test your knowledge so far: Personas & Details
+## Test your knowledge so far
 
-Here's another example, where we need to refactor an Azure bicep.
+Here are some example prompts for you to consider. First, how might you consolidate these two prompts into one, and then how would you improve the final version? What might you need to clarify later?
 
-**Initial attempt:** Update the @deploy.bicep for keyvault to include an event grid system topic which will stream to an azure logic app uri
+```txt
+Update the @deploy.bicep for keyvault to include an event grid system topic which will stream to an azure logic app uri
 
-Based on the guidelines discussed above, how might you improve this prompt?
+The section above has a source and topictype missing. Can you please update this to include those parameters?
+```
 
-**Your attempt:**
+Consider this more complex prompt to build an SSH factory using Rust. What do you notice about it? How specific is it? What would you change?
 
+```txt
+You are a Rust programmer. Generate a Rust struct named SshFactory for managing SSH connections. The struct should have fields for inventory, a flag to forward the SSH agent, and an optional login password. Implement the ConnectionFactory trait with methods get_local_connection and get_connection to create local and remote SSH connections, respectively. Use the ssh2 crate for SSH functionality and ensure the code is thread-safe with appropriate use of Arc and RwLock.
+```
 
 ---
 
