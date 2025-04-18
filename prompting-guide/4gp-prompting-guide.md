@@ -74,7 +74,6 @@ You are a Cisco NXOS engineer. Write a script that sets the secondary interface 
 
 Experiment with different approaches, but remember that the use of hard-coded data is an anti-pattern.
 
-
 ### Generating API version specific code.
 
 When working with certain APIs such as Azure API, the code  will use an API with a specific version date:
@@ -134,6 +133,32 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01'
 ```
 
 
+
+### Encapsulate separate contexts into separate chats
+
+The IBM watsonx Code Assistant extension for Microsoft VS Code is based on a chat-oriented core. When you start a new chat, there is no context until after you have submitted your first prompt. Using the context and persona practices above, you can establish context early and link to specific files in your repo using `@<filename>`. Your subsequent prompts may then refer to previous outputs, and you can use relative language without needing to re-input your progress or generated content. 
+
+For example, given the following initial prompt:
+
+```txt
+You are an Ansible engineer. Begin developing a new Ansible role called mq-ocp that deploys IBM MQ to OpenShift 4 with an exposed route. Use the kubernetes.core collection. Use fully qualified collection names. Use parameterization for the kubernetes and MQ resources wherever possible. Format the output as tasks only, suitable for tasks/main.yml.
+```
+
+Once you are happy with the generated content, you can follow up with subsequent prompts like the following:
+
+```txt
+Generate defaults/main.yml.
+
+Generate argSpec.
+
+Generate meta/main.yml.
+
+Generate a README.md that includes a synopsis, prerequisites, dependencies, up & running, task explanations, parameter explanations, author, and license information.
+
+Generate a top-level play called ibm-mq-day0-playbook.yml that runs this role on an inventory called rhel9Servers.
+```
+
+**NOTE:** Before you start a new coding session, be sure to start a new chat if you need to start from a clean slate!
 
 ### Also good to remember
 
