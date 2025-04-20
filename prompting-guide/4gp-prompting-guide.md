@@ -56,7 +56,7 @@ By being more specific, you can generate more useful code and spend less time co
 
 #### What is already working on the backend (Prompt Engineering)
 
-First, let's give a little context. **Parameterization** in the context of ***Prompt Engineering*** are the adjusted settings that go into the inherent behavior of your model for particular use case or set of use cases. Here are a couple of key Prompt Engineering parameters and how they work that I think are the most relevant:
+First, let's give a little context. **Parameterization** in the context of ***Prompt Engineering*** are the adjusted settings that go into the very behavior of your model for particular use case or set of use cases. Here are a couple of key Prompt Engineering parameters and how they work that I think are the most relevant:
 
 **Temperature** controls the randomness of responses. Lowering it (around 0.1) yields consistent, predictable outputs, while raising it (around 0.9) produces creative responses with varying degrees of variability.
 
@@ -68,7 +68,6 @@ First, let's give a little context. **Parameterization** in the context of ***Pr
 
 **Frequency vs. Presence penalties** combat repetition. Frequency penalizes reusing words, while presence encourages exploring new topics.
 
-
 **Logit bias** lets you make specific words more or less likely to show up in ones responses. This is handy when you want to steer the model toward or away from certain terminologies.
 
 #### Why this matters
@@ -77,7 +76,7 @@ For the purposes of our use case, **Code Generation**, we have optimized those b
 
 #### Where the magic happens (You, the Prompt Whisperer)
 
-As a consumer
+As a consumer, since Watson Code Assistant doesn't expose those parameters (sorry, just trust our secret sauce 😬), what you are essentially doing is an exercise in **Hard** and **Soft Prompting** through the inputs in our **prompt chat** and **inline in the code directly**. 
 
 #### Hard Prompting
  
@@ -113,7 +112,7 @@ print("Sorted array is:", arr)
 
 > **NOTE:** In its response, the nature of the question was so generic yet specialized in its domain that it felt compelled to provide an **Example usage** without me asking for it.
 
-
+#####Hard Prompting, The Tight Rope Act
 
 However, if you use hard-coded information in your prompt (making your hard prompt too hard), there's an excellent chance the response will be anonymized or otherwise different from what you prompted. For example, if you prompt with:
 
