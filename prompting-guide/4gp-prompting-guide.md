@@ -54,67 +54,7 @@ By being more specific, you can generate more useful code and spend less time co
 
 ### Parameterize Parameterize Parameterize
 
-#### What is already working on the backend (Prompt Engineering)
-
-First, let's give a little context. **Parameterization** in the context of ***Prompt Engineering*** are the adjusted settings that go into the very behavior of your model for particular use case or set of use cases. Here are a couple of key Prompt Engineering parameters and how they work that are the most relevant:
-
-**Temperature** controls the randomness of responses. Lowering it (around 0.1) yields consistent, predictable outputs, while raising it (around 0.9) produces creative responses with varying degrees of variability.
-
-**Stop sequences** tell the model when to end its response and acknowledges when a question has been fully answered.
-
-**Top-k** puts a hard limit on how many word choices the model considers at each step of its thought process. If for example, the top-k is set to say 50, the model then picks from ONLY the 50 most likely next words, ignoring less probable ones.
-
-**Top-p sampling** aka nucleus sampling, works by considering words based on their cumulative probability. With a lower value, the model sticks to high-confidence words, giving you more focused and reliable answers.
-
-**Frequency vs. Presence penalties** combat repetition. Frequency penalizes reusing words, while presence encourages exploring new topics.
-
-**Logit bias** lets you make specific words more or less likely to show up in ones responses. This is handy when you want to steer the model toward or away from certain terminologies.
-
-#### Why this matters
-
-For the purposes of our use case, **code generation**, we have optimized those backend **parameters**, such as **Temperature**, where the value threshold is set low enough to provide consistent and predictable outputs while allowing creative responses when appropriate. Additionally, we have coupled this with **Stop sequences** that are clear and produce structured functional code that adheres to proper syntax rules.
-
-#### Where the magic happens (You, the Prompt Whisperer)
-
-As a consumer, since IBM watsonx Code Assistant doesn't expose those parameters (sorry, just trust our secret sauce 😬), what you are essentially doing is an exercise in **Hard** and **Soft Prompting** through the inputs in our **prompt chat** and **inline in the code directly**. 
-
-#### Hard Prompting
- 
-Code generation is inherently an exercise in **hard prompting**. This process involves humans providing specific instructions as prompts to the AI domain expert, expecting a precise and accurate response from the expert. . As a warm up, let's ask watsonx Code Assistant to do something so generic as the following:
-
-```bash
-Write Python code to sort an array using the bubble sort algorithm.
-```
-
-watsonx Code Assistant would respond with:
-
-"*Here's a Python implementation of the bubble sort algorithm:*
-
-```
-# Assisted by watsonx Code Assistant 
-
-def bubble_sort(arr):
-    n = len(arr)
-
-    for i in range(n):
-        for j in range(0, n - i - 1):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-
-# Example usage:
-
-arr = [64, 34, 25, 12, 22, 11, 90]
-bubble_sort(arr)
-print("Sorted array is:", arr)
-```
-*This code defines a function ```bubble_sort``` that takes an array as input and sorts it using the bubble sort algorithm. The outer loop iterates through the array, and the inner loop compares adjacent elements and swaps them if they are in the wrong order. The process repeats until the array is sorted. The example usage demonstrates how to use the 
-```bubble_sort``` function to sort an array.*"
-
-> **NOTE:** In its response, the nature of the question was so generic yet specialized in its domain that it felt compelled to provide an **Example usage** without me asking for it.
-
-#####Hard Prompting, The Tight Rope Act
-
-However, if you use hard-coded information in your prompt (making your hard prompt too hard), there's an excellent chance the response will be anonymized or otherwise different from what you prompted. For example, if you prompt with:
+If you use hard-coded information in your prompt, there's an excellent chance the response will be anonymized or otherwise different from what you prompted. For example, if you prompt with:
 
 ```bash
 You are a Cisco NXOS engineer. Write a script that sets the secondary interface IPv4 address for Ethernet1/2 to 194.99.2.254/24.
@@ -133,52 +73,6 @@ You are a Cisco NXOS engineer. Write a script that sets the secondary interface 
 ```
 
 Experiment with different approaches, but remember that the use of hard-coded data is an anti-pattern.
-
-#### Soft Prompting
-
-Conversely, when code generation occurs without explicit instructions and the AI is provided with subtle guidance, the AI begins to generate prompts as prefix vector embeddings that are incomprehensible to humans. This phenomenon is commonly referred to as **soft prompting**.
-
-**IBM watsonx Code Assistant**, and code assistants in general, benefit from this technique in the form of single and multi-line code completion, which has made the solution so powerful in the present day. So for example, let's ask watsonx Code Assistant to do something traditional in the context of object oriented programming such as:
-
-```bash
-Create a python class Customer. Include attributes for firstName, lastName, and age.
-```
-
-watsonx Code Assistant would respond with:
-
-"*Here's a Python class named ```Customer``` with attributes for ```firstName```, ```lastName```, and ```age```:*
-
-```
- # Assisted by watsonx Code Assistant 
- 
-
-class Customer:
-
-    def __init__(self, first_name, last_name, age):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.age = age
-
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}"
-
-    def is_adult(self):
-        return self.age >= 18
-
-```
-*This class has three attributes: ```first_name```, ```last_name```, and ```age```. The ```__init__``` method initializes these attributes when a new Customer object is created. The ```full_name``` method returns the customer's full name, and the ```is_adult``` method checks if the customer is an adult (18 years or older).*"
-
-> **NOTE:** The example is deliberately omitted in the response to articulate the following point. 
-
-Now for the fun part. You've just copied the fruits of your **hard prompting** efforts from the prompt chat into your code file. Your results, which in effect act as a **parameterization** for **soft prompting** take over when asked to provide an example usage of your code **in-line** like so:  
-
-![Simple Code Generation Example](images/soft-prompt-example.gif)
-
-As expected, it instantiates customer object examples and provides what those example results would be. 
-
-#### The Punchline
-
-Remember that with **hard prompting**, *parameterization* is driven by the human (with great power comes great responsibility). The watsonx Code Assistant facilitates this in the chat. Conversely, with **soft prompting**, your entire contextualized code is *one big parameter* driven by our granite model (resistance is futile), which is under the hood of watsonx Code Assistant, facilitated within the in-line code directly.
 
 ### Generating API version specific code.
 
@@ -298,4 +192,222 @@ You are a Rust programmer. Generate a Rust struct named SshFactory for managing 
 
 **2** - _Do not hesitate to utilize extensive prompts; in certain scenarios, this approach can enhance the accuracy of prompt suggestions generated by the AI. In summary, a well-crafted prompt is crucial for optimal outcomes._
 
+
+
+
 ---
+# Persona‑Based Prompting Guide suggestions
+
+Use this cheat‑sheet when you need quick, clear prompts for IBM watsonx Code Assistant.
+
+---
+
+## Why personas help
+
+- Tell the model **who is speaking** and **what matters**.
+- Reduce back‑and‑forth by embedding context (role, domain, constraints) in one line.
+
+---
+
+## Build a strong persona line
+
+| Element | Example |
+|---------|---------|
+| **Role** | backend developer, site‑reliability engineer |
+| **Seniority** | junior, senior, principal |
+| **Domain** | fintech, healthcare, edge devices |
+| **Key constraints** | FIPS, low latency, 256 MB RAM cap |
+| **Audience / voice** | mentoring a junior, writing a blog post |
+
+Combine only what drives the answer. Extra words add noise.
+
+---
+
+## Prompt progression patterns
+
+### 1 – Terraform module
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Write Terraform to deploy an S3 bucket.` |
+| Better | `You are a cloud engineer. Write Terraform to deploy an encrypted S3 bucket.` |
+| Best | `You are a senior cloud engineer in a healthcare firm. Write Terraform that deploys an S3 bucket with SSE‑KMS, public access blocked, and versioning on.` |
+
+### 2 – Python ETL script
+
+```
+Good   : Write a Python script that loads a CSV into Postgres.
+Better : You are a data engineer. Write a Python script that loads a CSV into Postgres using psycopg2.
+Best   : You are a data engineer at a pharma company. Write a Python script that loads a large CSV into Postgres using COPY, tracks row count, and logs failures to CloudWatch.
+```
+
+### 3 – Security review
+
+```
+Good   : Review this Node.js code for bugs.
+Better : You are an application security auditor. Review this Node.js code for common OWASP issues.
+Best   : You are an application security auditor preparing a PCI report. Review this Node.js Express handler for OWASP Top 10 issues and suggest fixes inline.
+```
+
+### 4 – Postgres tuning
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Suggest Postgres settings for high load.` |
+| Better | `You are a database administrator. Suggest Postgres settings for steady 5 k writes per second.` |
+| Best | `You are a senior DBA at an ad‑tech firm. Suggest Postgres 15 settings to sustain 5 k writes per second on an m6i.2xlarge, 64 GB RAM, 2 TB gp3.` |
+
+---
+
+## Quick templates
+
+```txt
+You are a <role> focused on <domain>.
+Task: <what you need>.
+Constraints: <list>.
+Output: <code / steps / table>.
+```
+
+```txt
+Act as a <seniority> <role>.
+Goal: <create / improve / review>.
+Follow <style guide or standard>.
+```
+
+Copy, tweak, reuse.
+
+---
+
+## Extra tips
+
+- Keep sentences short.
+- Capitalize and punctuate.
+- Use parameter names instead of hard‑coding secrets or IPs.
+- Store proven prompts in `prompts.md` for easy reuse.
+- Start a **new chat** when you switch to a different project.
+
+--
+
+## Avoid "Give me a rock / no, not that rock" – be specific
+
+When a prompt is vague, the assistant guesses and you burn time correcting it.
+
+### Quick checklist
+
+- State **what** you need, **how** it will be used, and **where** it runs.
+- Add versions, limits, or standards.
+- Mark parameters instead of hard‑coding.
+
+### Prompt ladders
+
+#### 1 – Kubernetes manifest
+
+```
+Good   : Generate a Deployment for nginx.
+Better : Generate a Kubernetes Deployment for nginx 1.25.
+Best   : You are a platform engineer. Generate a Kubernetes Deployment for nginx 1.25 in namespace web, 2 replicas, CPU 250m, memory 256Mi, plus a ClusterIP Service.
+```
+
+#### 2 – Java unit test
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Write a JUnit test for my Calculator class.` |
+| Better | `You are a Java developer. Write a JUnit 5 test for the add() method in Calculator.` |
+| Best | `You are a senior Java developer. Write a JUnit 5 test for Calculator.add() covering positive, negative, and overflow cases. Mock external calls with Mockito.` |
+
+#### 3 – PowerShell backup script
+
+```
+Good   : Create a script to back up files.
+Better : You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly.
+Best   : You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly, retains 30 archives, and writes to the Windows event log.
+```
+
+### Templates to tighten your ask
+
+```txt
+Task: <do X> on <tool / version> under <constraints>.
+Return: <
+
+
+
+
+# Also good to remember
+
+Clear prompts help you get clear code.  
+Keep these points in mind every time you write.
+
+---
+
+## Write clean text
+
+- Capitalize the first word.  
+- End with a period or question mark.  
+- Break long thoughts into short lines.
+
+## Separate asks
+
+- Put one requirement per line.  
+- Insert blank lines between distinct tasks.
+
+## Be polite
+
+- Add “please” or “thanks” when you ask for help.  
+- A friendly tone often yields a thoughtful reply.
+
+## Mask secrets
+
+- Replace real keys and IDs with placeholders like `<API_KEY>` or `<DB_PASSWORD>`.  
+- Never paste private data into prompts.
+
+## Save your winners
+
+- Keep a `prompts.md` file in your repo.  
+- Record prompts that work and the outputs you liked.  
+- Use it for quick reuse and regression tests.
+
+## Reset context
+
+- Start a new chat when you switch projects.  
+- Fresh context avoids accidental carry‑over.
+
+## Retest on new models
+
+- Run saved prompts on updated models.  
+- Spot changes early and adjust as needed.
+
+
+
+
+# Final tips for an optimal usability experience
+
+Clear prompts and quick feedback keep the workflow smooth.
+
+---
+
+## Refine when answers miss the mark
+- Rewrite or narrow the request.  
+- Each tweak guides the model closer to what you need.
+
+## Add useful detail
+- Include role, task, constraints, and desired output.  
+- Longer, well‑scoped prompts often return sharper code.
+
+## Keep a prompt log
+- Save proven prompts in `prompts.md`.  
+- Re‑run them after model updates to spot changes.
+
+## Mask secrets
+- Replace real keys or IDs with placeholders like `<API_KEY>`.
+
+## Reset chat for new topics
+- Start a fresh conversation when you change projects.  
+- Clean context avoids carry‑over confusion.
+
+---
+
+Follow these steps and you’ll get solid results with less back‑and‑forth.
+
+Happy prompting!
+
