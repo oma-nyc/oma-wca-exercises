@@ -56,7 +56,7 @@ By being more specific, you can generate more useful code and spend less time co
 
 #### What is already working on the backend (Prompt Engineering)
 
-First, let's give a little context. **Parameterization** in the context of ***Prompt Engineering*** are the adjusted settings that go into the very behavior of your model for particular use case or set of use cases. Here are a couple of key Prompt Engineering parameters and how they work that I think are the most relevant:
+First, let's give a little context. **Parameterization** in the context of ***Prompt Engineering*** are the adjusted settings that go into the very behavior of your model for particular use case or set of use cases. Here are a couple of key Prompt Engineering parameters and how they work that are the most relevant:
 
 **Temperature** controls the randomness of responses. Lowering it (around 0.1) yields consistent, predictable outputs, while raising it (around 0.9) produces creative responses with varying degrees of variability.
 
@@ -72,21 +72,21 @@ First, let's give a little context. **Parameterization** in the context of ***Pr
 
 #### Why this matters
 
-For the purposes of our use case, **Code Generation**, we have optimized those backend **parameters**, such as **Temperature**, where the value threshold is set low enough to provide consistent and predictable outputs while allowing creative responses when appropriate. Additionally, we have coupled this with **Stop sequences** that are clear and produce structured functional code that adheres to proper syntax rules.
+For the purposes of our use case, **code generation**, we have optimized those backend **parameters**, such as **Temperature**, where the value threshold is set low enough to provide consistent and predictable outputs while allowing creative responses when appropriate. Additionally, we have coupled this with **Stop sequences** that are clear and produce structured functional code that adheres to proper syntax rules.
 
 #### Where the magic happens (You, the Prompt Whisperer)
 
-As a consumer, since Watson Code Assistant doesn't expose those parameters (sorry, just trust our secret sauce 😬), what you are essentially doing is an exercise in **Hard** and **Soft Prompting** through the inputs in our **prompt chat** and **inline in the code directly**. 
+As a consumer, since IBM watsonx Code Assistant doesn't expose those parameters (sorry, just trust our secret sauce 😬), what you are essentially doing is an exercise in **Hard** and **Soft Prompting** through the inputs in our **prompt chat** and **inline in the code directly**. 
 
 #### Hard Prompting
  
-Code generation is inherently an exercise in **hard prompting**. This process involves humans providing specific instructions as prompts to the AI domain expert, expecting a precise and accurate response from the expert. . As a warm up, say I ask WCA to do something so generic as the following:
+Code generation is inherently an exercise in **hard prompting**. This process involves humans providing specific instructions as prompts to the AI domain expert, expecting a precise and accurate response from the expert. . As a warm up, let's ask watsonx Code Assistant to do something so generic as the following:
 
 ```bash
 Write Python code to sort an array using the bubble sort algorithm.
 ```
 
-Watson Code Assistant would respond with:
+watsonx Code Assistant would respond with:
 
 "*Here's a Python implementation of the bubble sort algorithm:*
 
@@ -138,13 +138,13 @@ Experiment with different approaches, but remember that the use of hard-coded da
 
 Conversely, when code generation occurs without explicit instructions and the AI is provided with subtle guidance, the AI begins to generate prompts as prefix vector embeddings that are incomprehensible to humans. This phenomenon is commonly referred to as **soft prompting**.
 
-**Watson Code Assistant**, and code assistants in general, benefit from this technique in the form of single and multi-line code completion, which has made the solution so powerful in the present day. So for example, I ask WCA to do something traditional in the context of object oriented programming such as:
+**IBM watsonx Code Assistant**, and code assistants in general, benefit from this technique in the form of single and multi-line code completion, which has made the solution so powerful in the present day. So for example, let's ask watsonx Code Assistant to do something traditional in the context of object oriented programming such as:
 
 ```bash
 Create a python class Customer. Include attributes for firstName, lastName, and age.
 ```
 
-Watson Code Assistant would respond with:
+watsonx Code Assistant would respond with:
 
 "*Here's a Python class named ```Customer``` with attributes for ```firstName```, ```lastName```, and ```age```:*
 
@@ -168,13 +168,17 @@ class Customer:
 ```
 *This class has three attributes: ```first_name```, ```last_name```, and ```age```. The ```__init__``` method initializes these attributes when a new Customer object is created. The ```full_name``` method returns the customer's full name, and the ```is_adult``` method checks if the customer is an adult (18 years or older).*"
 
-> **NOTE:** I am deliberately omitting the example in the response to articulate the following point. 
+> **NOTE:** The example is deliberately omitted in the response to articulate the following point. 
 
 Now for the fun part. You've just copied the fruits of your **hard prompting** efforts from the prompt chat into your code file. Your results, which in effect act as a **parameterization** for **soft prompting** take over when asked to provide an example usage of your code **in-line** like so:  
 
 ![Simple Code Generation Example](images/soft-prompt-example.gif)
 
 As expected, it instantiates customer object examples and provides what those example results would be. 
+
+#### The Punchline
+
+Remember that with **hard prompting**, *parameterization* is driven by the human (with great power comes great responsibility). The watsonx Code Assistant facilitates this in the chat. Conversely, with **soft prompting**, your entire contextualized code is *one big parameter* driven by our granite model (resistance is futile), which is under the hood of watsonx Code Assistant, facilitated within the in-line code directly.
 
 ### Generating API version specific code.
 
