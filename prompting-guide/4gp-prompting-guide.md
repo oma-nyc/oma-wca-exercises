@@ -1,4 +1,4 @@
-# IBM watsonx Code Assistant Prompting Guide: Practical hands-on
+# The Unofficial IBM watsonx Code Assistant Prompting Guide
 
 <img src="https://github.com/user-attachments/assets/d44d99e9-8d0b-42f8-a0af-639145e79839" width="300" align="left" alt="prompt-guide-8">
   
@@ -12,71 +12,31 @@
 
 One of the key advantages of watsonx Code Assistant is its ability to leverage **context** and industry **best practices** to generate intelligent suggestions. As you use watsonx Code Assistant, you'll notice that it incorporates context from the overall source file and the specific paragraph to provide more accurate recommendations. It analyzes the code you have already written and suggests improvements or additions based on established best practices.
 
----
-
-## Here are a few key examples of simple ways to enhance your experience👇
-
-### Use personas or role names to provide context
-
-The LLM supporting watsonx Code Assistant is tuned to support 116 different programming languages. When prompting for content, explanations, or opportunities for improvement, it's important to provide context that includes the role or persona that would otherwise be expected to produce the content without AI.
-
-Let's start with a basic query for language recommendations. Suppose you work for an operational technology company that produces embedded systems, sensors, and other instruments. You want to implement the UNIX `cat` command and ask the following question:
-
-**Good:** `Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
-
-This is a good start, and one improvement would be to prepend a sentence that provides more context. Consider the following:
-
-**Better:** `You are an embedded systems programmer. Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
-
-This is better because the needed skillset is now much clearer. Finally, it would help to include any specific requirements. For example:
-
-**Best:** `You are an embedded systems programmer building secure fielded instruments. Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
-
-This is better than our **Better** prompt because it makes visible the security needs, thus avoiding a follow up prompt such as, `What if I need robust security capabilities?`
-
-### Avoid "Give me a rock / No, not that rock" by starting with specific details, to reduce iterations
-
-Remember when you first learned how to code, when your instructor said computers will do exactly what you tell them to do? LLMs aren't very different in that regard. Be sure to add important details to your prompts. For example:
-
-**Good:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift.`
-
-This is also a good start, but you might get content that supports older versions of OpenShift like OCP 3. If you need OpenShift 4 support, modify your prompt by adding a "4" at the end.
-
-**Better:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift 4.`
-
-This is more specific, but then you notice the proposed content suggests passing OpenShift CLI commands instead of using a bespoke Ansible module, which may not be idempotent. Further, the proposed content uses short module names which is a linting violation; and you remember that, in OpenShift, services are not exposed as routes by default.
-
-**Best:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift 4 with an exposed route. Use the kubernetes.core collection. Use fully qualified collection names.`
-
-By being more specific, you can generate more useful code and spend less time correcting. The good news here is that watsonx Code Assistant retains context in each chat, which means you can propose corrections conversationally instead of having to rewrite the entire prompt.
-
-### Parameterize Parameterize Parameterize
-
-#### A primer on Prompt Engineering
+## A primer on Prompt Engineering
 
 First, let's give a little context. **Parameterization** in the context of prompt engineering covers the adjusted settings that go into the behavior of your model for your particular use case. Here are some key prompt engineering parameters and how they work:
 
-**Temperature** controls the randomness of responses. Lowering it to approximately 0.1 yields consistent, predictable outputs, while raising it (approximately 0.9) produces creative responses with varying degrees of variability.
+- **Temperature** controls the randomness of responses. Lowering it to approximately 0.1 yields consistent, predictable outputs, while raising it (approximately 0.9) produces creative responses with varying degrees of variability.
 
-**Stop sequences** tell the model when to end its response and acknowledge when a question has been fully answered.
+- **Stop sequences** tell the model when to end its response and acknowledge when a question has been fully answered.
 
-**Top-k** puts a hard limit on how many word choices the model shall consider at each step of its thought process. If for example, the top-k is set to say 50, the model then picks from ONLY the 50 most likely next words, ignoring less probable ones.
+- **Top-k** puts a hard limit on how many word choices the model shall consider at each step of its thought process. If for example, the top-k is set to say 50, the model then picks from ONLY the 50 most likely next words, ignoring less probable ones.
 
-**Top-p sampling** aka nucleus sampling works by considering words based on their cumulative probability. With a lower value, the model sticks to high-confidence words, giving you more focused and reliable answers.
+- **Top-p sampling** aka nucleus sampling works by considering words based on their cumulative probability. With a lower value, the model sticks to high-confidence words, giving you more focused and reliable answers.
 
-**Frequency vs. Presence penalties** combat repetition. Frequency penalizes reusing words, while presence encourages exploring new topics.
+- **Frequency vs. presence penalties** combat repetition. Frequency penalizes reusing words, while presence encourages exploring new topics.
 
-**Logit bias** lets you select specific words to be more or less likely to show up in ones responses. This is helpful when you want to steer the model toward or away from certain terminologies.
+- **Logit bias** lets you select specific words to be more or less likely to show up in ones responses. This is helpful when you want to steer the model toward or away from certain terminologies.
 
-#### Why this matters
+### Why this matters
 
 For the purposes of **code generation** we have optimized backend **parameters** like **Temperature**, where the value threshold is set low enough to provide consistent and predictable outputs while allowing creative responses when appropriate. Additionally, we have coupled this with **Stop sequences** that are clear and produce structured functional code that adheres to proper syntax rules.
 
-#### Where the magic happens (You, the Prompt Whisperer)
+### Where the magic happens (You, the Prompt Whisperer)
 
 As a consumer, since watsonx Code Assistant does not expose those parameters, you are effectively practicing **Hard** and **Soft Prompting** through the inputs in our **prompt chat** and **inline in the code directly**.
 
-#### Hard Prompting
+### Hard Prompting
 
 Code generation is inherently an exercise in **hard prompting**, requiring humans to provide specific instructions as prompts to the AI domain expert to receive accurate response from the expert. As a warm up, let's ask watsonx Code Assistant to do something generic.
 
@@ -84,7 +44,7 @@ Code generation is inherently an exercise in **hard prompting**, requiring human
 Write Python code to sort an array using the bubble sort algorithm.
 ```
 
-watsonx Code Assistant would respond with:
+IBM watsonx Code Assistant might respond with:
 
 ```txt
 Here's a Python implementation of the bubble sort algorithm:
@@ -132,7 +92,7 @@ You are a Cisco NXOS engineer. Write a script that sets the secondary interface 
 
 Experiment with different approaches, but remember that the use of hard-coded data is an anti-pattern.
 
-#### Soft Prompting
+### Soft Prompting
 
 Conversely, when code generation occurs without explicit instructions and the AI is provided with subtle guidance, the AI begins to generate prompts as prefix vector embeddings that are incomprehensible to humans. This phenomenon is commonly referred to as **soft prompting**.
 
@@ -174,18 +134,80 @@ Now for the fun part. You've just copied the fruits of your **hard prompting** e
 
 As expected, it instantiates customer object examples and provides what those example results would be.
 
-#### The Punchline
+### The Punchline
 
 Remember that with **hard prompting**, parameterization is driven by the human. The watsonx Code Assistant facilitates this in the chat. Conversely, with **soft prompting** your entire contextualized code is one big parameter driven by our granite model, which is under the hood of watsonx Code Assistant and facilitated within the in-line code directly.
 
+## Here are some simple ways to enhance your experience👇
+
+### Use personas or role names to provide context
+
+The LLM supporting watsonx Code Assistant is tuned to support 116 different programming languages. When prompting for content, explanations, or opportunities for improvement, it's important to provide context that includes the role or persona that would otherwise be expected to produce the content without AI.
+
+Let's start with a basic query for language recommendations. Suppose you work for an operational technology company that produces embedded systems, sensors, and other instruments. You want to implement the UNIX `cat` command and ask the following question:
+
+**Good:** `Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
+
+This is a good start, and one improvement would be to prepend a sentence that provides more context. Consider the following:
+
+**Better:** `You are an embedded systems programmer. Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
+
+This is better because the needed skillset is now much clearer. Finally, it would help to include any specific requirements. For example:
+
+**Best:** `You are an embedded systems programmer building secure fielded instruments. Between C, C++, and Ada, which language is best for implementing the UNIX "cat" command?`
+
+This is better than our **Better** prompt because it makes visible the security needs, thus avoiding a follow up prompt such as, `What if I need robust security capabilities?`
+
+You can use the elements in the following table to build a strong persona line.
+
+| Element | Example |
+|---------|---------|
+| **Role** | backend developer, site‑reliability engineer |
+| **Seniority** | junior, senior, principal |
+| **Domain** | fintech, healthcare, edge devices |
+| **Key constraints** | FIPS, low latency, 256 MB RAM cap |
+| **Audience / voice** | mentoring a junior, writing a blog post |
+
+### More examples
+
+#### Terraform module
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Write Terraform to deploy an S3 bucket.` |
+| Better | `You are a cloud engineer. Write Terraform to deploy an encrypted S3 bucket.` |
+| Best | `You are a senior cloud engineer in a healthcare firm. Write Terraform that deploys an S3 bucket with SSE‑KMS, public access blocked, and versioning on.` |
+
+#### Python ETL script
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Write a Python script that loads a CSV into PostgreSQL.` |
+| Better | `You are a data engineer. Write a Python script that loads a CSV into PostgreSQL using psycopg2.` |
+| Best | `You are a data engineer at a pharma company. Write a Python script that loads a large CSV into PostgreSQL using COPY, tracks row count, and logs failures to CloudWatch.` |
+
+#### Security review
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Review this Node.js code for bugs.` |
+| Better | `You are an application security auditor. Review this Node.js code for common OWASP issues.` |
+| Best | `You are an application security auditor preparing a PCI report. Review this Node.js Express handler for OWASP Top 10 issues and suggest fixes inline.` |
+
+#### Postgres tuning
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Suggest Postgres settings for high load.` |
+| Better | `You are a database administrator. Suggest Postgres settings for steady 5 k writes per second.` |
+| Best | `You are a senior DBA at an ad‑tech firm. Suggest Postgres 15 settings to sustain 5 k writes per second on an m6i.2xlarge, 64 GB RAM, 2 TB gp3.` |
+
 ### Generating API version specific code
 
-When working with certain APIs such as Azure API, the code will use an API with a specific version date:
-
-Given the following prompt:
+When working with certain APIs such as Azure API, the code will use an API with a specific version date. Given the following prompt:
 
 ```txt
-Write a bicep to create a keyvault
+Write a bicep to create a keyvault.
 ```
 
 The code output generated by WCA includes the following dated Azure API version:
@@ -220,7 +242,7 @@ Here are the dates for the available Key Vault API versions as of April 2024:
 2023-02-01
 ```
 
-We can take this information and request that a specific API version is used:
+We can take this information and request that a specific API version is used.
 
 Prompt:
 
@@ -261,6 +283,48 @@ Generate a top-level play called ibm-mq-day0-playbook.yml that runs this role on
 
 **NOTE:** Before you start a new coding session, be sure to start a new chat if you need to start from a clean slate!
 
+### Avoid "Give me a rock / No, not that rock" by starting with specific details, to reduce iterations
+
+Remember when you first learned how to code, when your instructor said computers will do exactly what you tell them to do? LLMs aren't very different in that regard. Be sure to add important details to your prompts. For example:
+
+**Good:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift.`
+
+This is also a good start, but you might get content that supports older versions of OpenShift like OCP 3. If you need OpenShift 4 support, modify your prompt by adding a "4" at the end.
+
+**Better:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift 4.`
+
+This is more specific, but then you notice the proposed content suggests passing OpenShift CLI commands instead of using a bespoke Ansible module, which may not be idempotent. Further, the proposed content uses short module names which is a linting violation; and you remember that, in OpenShift, services are not exposed as routes by default.
+
+**Best:** `You are an Ansible engineer. Write a playbook that deploys IBM MQ on OpenShift 4 with an exposed route. Use the kubernetes.core collection. Use fully qualified collection names.`
+
+By being more specific, you can generate more useful code and spend less time correcting. The good news here is that watsonx Code Assistant retains context in each chat, which means you can propose corrections conversationally instead of having to rewrite the entire prompt.
+
+More Examples:
+
+#### Kubernetes manifest
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Generate a Deployment for nginx.` |
+| Better | `Generate a Kubernetes Deployment for nginx 1.25.` |
+| Best | `You are a platform engineer. Generate a Kubernetes Deployment for nginx 1.25 in namespace web, 2 replicas, CPU 250m, memory 256Mi, plus a ClusterIP Service.` |
+
+#### Java unit test
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Write a JUnit test for my Calculator class.` |
+| Better | `You are a Java developer. Write a JUnit 5 test for the add() method in Calculator.` |
+| Best | `You are a senior Java developer. Write a JUnit 5 test for Calculator.add() covering positive, negative, and overflow cases. Mock external calls with Mockito.` |
+
+#### PowerShell backup script
+
+| Level | Prompt |
+|-------|--------|
+| Good | `Create a script to back up files.` |
+| Better | `You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly.` |
+| Best | `You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly, retains 30 archives, and writes to the Windows event log.` |
+
 ### Also good to remember
 
 **Neatness counts!** Be sure to capitalize the beginning of your sentences, separate sections using commas, and end sentences with periods or question marks. You may even find that good manners get you different results: try using "please" and see what happens!
@@ -293,219 +357,4 @@ You are a Rust programmer. Generate a Rust struct named SshFactory for managing 
 
 **2** - _Do not hesitate to utilize extensive prompts; in certain scenarios, this approach can enhance the accuracy of prompt suggestions generated by the AI. In summary, a well-crafted prompt is crucial for optimal outcomes._
 
-
-# Persona‑Based Prompting Guide suggestions
-
-Use this cheat‑sheet when you need quick, clear prompts for IBM watsonx Code Assistant.
-
 ---
-
-## Why personas help
-
-- Tell the model **who is speaking** and **what matters**.
-- Reduce back‑and‑forth by embedding context (role, domain, constraints) in one line.
-
----
-
-## Build a strong persona line
-
-| Element | Example |
-|---------|---------|
-| **Role** | backend developer, site‑reliability engineer |
-| **Seniority** | junior, senior, principal |
-| **Domain** | fintech, healthcare, edge devices |
-| **Key constraints** | FIPS, low latency, 256 MB RAM cap |
-| **Audience / voice** | mentoring a junior, writing a blog post |
-
-Combine only what drives the answer. Extra words add noise.
-
----
-
-## Prompt progression patterns
-
-### 1 – Terraform module
-
-| Level | Prompt |
-|-------|--------|
-| Good | `Write Terraform to deploy an S3 bucket.` |
-| Better | `You are a cloud engineer. Write Terraform to deploy an encrypted S3 bucket.` |
-| Best | `You are a senior cloud engineer in a healthcare firm. Write Terraform that deploys an S3 bucket with SSE‑KMS, public access blocked, and versioning on.` |
-
-### 2 – Python ETL script
-
-```
-Good   : Write a Python script that loads a CSV into Postgres.
-Better : You are a data engineer. Write a Python script that loads a CSV into Postgres using psycopg2.
-Best   : You are a data engineer at a pharma company. Write a Python script that loads a large CSV into Postgres using COPY, tracks row count, and logs failures to CloudWatch.
-```
-
-### 3 – Security review
-
-```
-Good   : Review this Node.js code for bugs.
-Better : You are an application security auditor. Review this Node.js code for common OWASP issues.
-Best   : You are an application security auditor preparing a PCI report. Review this Node.js Express handler for OWASP Top 10 issues and suggest fixes inline.
-```
-
-### 4 – Postgres tuning
-
-| Level | Prompt |
-|-------|--------|
-| Good | `Suggest Postgres settings for high load.` |
-| Better | `You are a database administrator. Suggest Postgres settings for steady 5 k writes per second.` |
-| Best | `You are a senior DBA at an ad‑tech firm. Suggest Postgres 15 settings to sustain 5 k writes per second on an m6i.2xlarge, 64 GB RAM, 2 TB gp3.` |
-
----
-
-## Quick templates
-
-```txt
-You are a <role> focused on <domain>.
-Task: <what you need>.
-Constraints: <list>.
-Output: <code / steps / table>.
-```
-
-```txt
-Act as a <seniority> <role>.
-Goal: <create / improve / review>.
-Follow <style guide or standard>.
-```
-
-Copy, tweak, reuse.
-
----
-
-## Extra tips
-
-- Keep sentences short.
-- Capitalize and punctuate.
-- Use parameter names instead of hard‑coding secrets or IPs.
-- Store proven prompts in `prompts.md` for easy reuse.
-- Start a **new chat** when you switch to a different project.
-
---
-
-## Avoid "Give me a rock / no, not that rock" – be specific
-
-When a prompt is vague, the assistant guesses and you burn time correcting it.
-
-### Quick checklist
-
-- State **what** you need, **how** it will be used, and **where** it runs.
-- Add versions, limits, or standards.
-- Mark parameters instead of hard‑coding.
-
-### Prompt ladders
-
-#### 1 – Kubernetes manifest
-
-```
-Good   : Generate a Deployment for nginx.
-Better : Generate a Kubernetes Deployment for nginx 1.25.
-Best   : You are a platform engineer. Generate a Kubernetes Deployment for nginx 1.25 in namespace web, 2 replicas, CPU 250m, memory 256Mi, plus a ClusterIP Service.
-```
-
-#### 2 – Java unit test
-
-| Level | Prompt |
-|-------|--------|
-| Good | `Write a JUnit test for my Calculator class.` |
-| Better | `You are a Java developer. Write a JUnit 5 test for the add() method in Calculator.` |
-| Best | `You are a senior Java developer. Write a JUnit 5 test for Calculator.add() covering positive, negative, and overflow cases. Mock external calls with Mockito.` |
-
-#### 3 – PowerShell backup script
-
-```
-Good   : Create a script to back up files.
-Better : You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly.
-Best   : You are a sysadmin. Create a PowerShell script that zips C:/Logs nightly, retains 30 archives, and writes to the Windows event log.
-```
-
-### Templates to tighten your ask
-
-```txt
-Task: <do X> on <tool / version> under <constraints>.
-Return: <
-
-
-
-
-# Also good to remember
-
-Clear prompts help you get clear code.  
-Keep these points in mind every time you write.
-
----
-
-## Write clean text
-
-- Capitalize the first word.  
-- End with a period or question mark.  
-- Break long thoughts into short lines.
-
-## Separate asks
-
-- Put one requirement per line.  
-- Insert blank lines between distinct tasks.
-
-## Be polite
-
-- Add “please” or “thanks” when you ask for help.  
-- A friendly tone often yields a thoughtful reply.
-
-## Mask secrets
-
-- Replace real keys and IDs with placeholders like `<API_KEY>` or `<DB_PASSWORD>`.  
-- Never paste private data into prompts.
-
-## Save your winners
-
-- Keep a `prompts.md` file in your repo.  
-- Record prompts that work and the outputs you liked.  
-- Use it for quick reuse and regression tests.
-
-## Reset context
-
-- Start a new chat when you switch projects.  
-- Fresh context avoids accidental carry‑over.
-
-## Retest on new models
-
-- Run saved prompts on updated models.  
-- Spot changes early and adjust as needed.
-
-
-
-
-# Final tips for an optimal usability experience
-
-Clear prompts and quick feedback keep the workflow smooth.
-
----
-
-## Refine when answers miss the mark
-- Rewrite or narrow the request.  
-- Each tweak guides the model closer to what you need.
-
-## Add useful detail
-- Include role, task, constraints, and desired output.  
-- Longer, well‑scoped prompts often return sharper code.
-
-## Keep a prompt log
-- Save proven prompts in `prompts.md`.  
-- Re‑run them after model updates to spot changes.
-
-## Mask secrets
-- Replace real keys or IDs with placeholders like `<API_KEY>`.
-
-## Reset chat for new topics
-- Start a fresh conversation when you change projects.  
-- Clean context avoids carry‑over confusion.
-
----
-
-Follow these steps and you’ll get solid results with less back‑and‑forth.
-
-Happy prompting!
-
