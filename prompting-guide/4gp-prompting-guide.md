@@ -130,7 +130,7 @@ This class has three attributes: first_name, last_name, and age. The __init__ me
 
 Now for the fun part. You've just copied the fruits of your **hard prompting** efforts from the prompt chat into your code file. Your results, which in effect act as a **parameterization** for **soft prompting** take over when asked to provide an example usage of your code **in-line** like so:  
 
-![Simple Code Generation Example](images/soft-prompt-example.gif)
+![Simple Code Generation Example](images/soft-prompt-example.png)
 
 As expected, it instantiates customer object examples and provides what those example results would be.
 
