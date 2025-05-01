@@ -6,6 +6,8 @@ Create a new ibm-mq namespace on OpenShift 4. Deploy IBM MQ with an exposed rout
 
 Create a new ibm-mq namespace on OpenShift 4. Create a Deploy IBM MQ with an exposed route. Use the kubernetes.core collection. Parameterize all possible variables including the MQ queue name and credentials.
 
+You are an Ansible automation engineer. Begin developing an Ansible role that will deploy IBM MQ on OpenShift 4. Start with tasks/main.yml and use the kubernetes.core collection.
+
 ## CIS
 
 Download cis benchmark for rhel9 x86_64. Make a copy of the benchmark files. Create a custom benchmark file that excludes all selinux checks. Scan servers based on the custom benchmark and output the findings. Remediate the critical and high findings on the servers in violation.
