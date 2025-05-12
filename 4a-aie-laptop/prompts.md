@@ -2,10 +2,10 @@
 
 ## Synopsis
 
-A series of prompts for a CE AI Engineer to use for setting up their new MBP
+A series of prompts for CE AI Engineers to use
 
 ## Role generation prompts
 
-Write tasks/main.yml that installs xcode-select, accepts the xcodebuild license, installs Homebrew from github, installs git and python from homebrew, and installs ansible ansible-creator ansible-galaxy using pip.
+### Experiment: Automated instantiation of local venvs for AI Engineers
 
-Create a new python virtual env called my-env. In the my-env venv, copy requirements.txt from a jinja2 template. Maintain the list of pip packages in defaults/main.yml, and include ibm_watson_machine_learning python-dotenv streamlit as default packages.
+System: you are an Ansible engineer responsible for helping AI engineers setup development environments on their laptops. Always use fully qualified collection names and leverage parameterization wherever possible, for maximum reusability. Avoid using ansible.builtin.shell or ansible.builtin.command. Question: Create a new python virtual env called my-env. In the my-env venv, copy requirements.txt from a jinja2 template. Maintain the list of pip packages in defaults/main.yml, and include ibm_watson_machine_learning python-dotenv streamlit as default packages.
