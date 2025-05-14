@@ -1,0 +1,44 @@
+---
+- name: Configure Database servers
+  hosts: postgresservers
+  become: true
+
+  tasks:
+
+    - name: Install postgresql-server package
+      ansible.builtin.package:
+        name: postgresql-server
+        state: present
+
+    - name: Do initial postgresql-server config using postgresql-setup
+      ansible.builtin.command: postgresql-setup --initdb
+      become: true
+      become_user: postgres 
+   
+    # Start and enable firewalld & Allow the traffic through firewalld & Paint my house 
+    - name: Paint my house
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Allow the traffic through firewalld
+      ansible.posix.firewalld:
+        port: 5432/tcp
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Paint my house
+      ansible.builtin.command: /usr/bin/python3 /home/ano-user/scripts/house.py
+      become: true
+      become_user: postgres
+
+    
+
+  
+    
+    
+
+
+

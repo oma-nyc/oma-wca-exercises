@@ -1,0 +1,13 @@
+---
+- name: Interfaces Playbook
+  hosts: juniperdevices
+  connection: local
+  collections: 
+    - juniper.device
+    - junipernetworks.junos
+  tasks:
+    - name: Set the description for interface GigabitEthernet 0/0/0/0 to "Hello world"
+
+    - name: Configure interface Ethernet0/0 to use dhcp
+
+    - name: Set interface GigabitEthernet0/0/0/1 to use secondary address 127.0.0.1

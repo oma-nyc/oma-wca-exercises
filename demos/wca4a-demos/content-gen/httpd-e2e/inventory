@@ -1,0 +1,11 @@
+[apacheservers]
+
+; prod VMs
+rhel-mju-1 ansible_sudo_pass=password
+;rhel-mju-2 ansible_sudo_pass=password
+
+; demo at THINK
+;10.103.187.192 ansible_sudo_pass=password
+
+; dev VMs at Hilton
+;192.168.20.18 ansible_sudo_pass=password

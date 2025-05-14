@@ -1,0 +1,419 @@
+---
+- name: Clone Proxmox VM via CLS
+  hosts: proxmox
+  become: true
+  gather_facts: yes
+ 
+  vars:  
+
+    Server:
+
+      Rocky9:
+        vmid: 121681
+        ops: Rocky9
+
+      Centos:
+        vmid: 778  
+        ops: Centos
+
+      RHEL9:
+        vmid: 121686
+        ops: RHEL9  
+
+      RHEL8:
+        vmid: 2010
+        ops: RHEL8  
+
+      Wolverines-Test:
+        vmid: 780
+        ops: Wolverines-Test      
+
+      TeamTwoRH8:
+        vmid: 110
+        ops: TeamTwoRH8
+
+      TeamTwoRH9:
+        vmid: 115
+        ops: TeamTwoRH9  
+
+      TeamTwoRocky8:
+        vmid: 11667
+        ops: TeamTwoRocky8  
+
+      TeamTwoRocky9:
+        vmid: 11668
+        ops: TeamTwoRocky9 
+
+      RadioStarsDev:
+        vmid: 121679
+        ops: RadioStarsDev  
+
+      Ubuntu:
+        vmid: 121685
+        ops: Ubuntu   
+
+      Plano:
+        vmid: 121687
+        ops: Ubuntu-Plano   
+
+      Vedge:
+        vmid: 112686
+        ops: Vedge
+              
+    survey_answer: "REQUIRED"        
+
+    pw: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36353331393535663565636234363635376139643864303339376134643533666663386261313138
+          3339663666656566326431633833396364346634373139640a643161356364386264643961353566
+          63623931653862333262313138653437396261646334616665666132653564353731326336353764
+          3762396664623736330a323131346137323639626239663164663165323239653565376234353737
+          3930
+
+    pmp: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36643631633037383436333463373861363462643463326636623935376137636435643864306138
+          6464393334633561623536653236353734666234323666640a623138663465386635313766333430
+          33623238636639616137653466393733613137623833316665653135383164303065323333653162
+          6464373439643666330a653235323035366338316533623164373032306230373737316433663632
+          3330
+
+  tasks:
+
+   - name: set variables for clone from survey
+     set_fact:
+       vm_id: "{{ Server[survey_answer]['vmid'] }}"
+       os:  "{{ Server[survey_answer]['ops'] }}"
+
+   - name: Get current date and Zulu time to add to JSON results file name
+     set_fact: 
+      currenttime: "{{ ansible_date_time.iso8601 }}"    
+  
+   - name: Generate random words
+     set_fact:
+         ins_name: "{{lookup('community.general.random_words', numwords=1, delimiter='-', case='capitalize')}}"
+         cacheable: yes
+
+   - name: generate random number
+     set_fact:
+        randome_number: "{{ 6000 | random }}"      
+
+   - name: set VM name 
+     set_fact:
+       VMname: "{{ ins_name }}-{{ os }}"        
+
+   - name: clone template with pool
+     ansible.builtin.shell:
+       cmd: qm clone {{ vm_id }} {{ randome_number }} --full --name {{ ins_name }}-{{ os }} --pool {{ pool_name }}
+     register: clone
+     when:
+        - pool_name != "" 
+
+   - name: clone template without pool
+     ansible.builtin.shell:
+       cmd: qm clone {{ vm_id }} {{ randome_number }} --full --name {{ ins_name }}-{{ os }} 
+     register: clone
+     when:
+        - pool_name == ""     
+
+   - name: output clone data
+     debug:
+      msg: "{{ clone }}"  
+
+   - name: Start the vm and wait for it to start
+     community.general.proxmox_kvm:
+        api_user: root@pam
+        api_password: '{{ pmp }}'
+        api_host: 10.246.79.177
+        node: proxmox
+        vmid: '{{ randome_number }}'
+        state: started
+        timeout: 200     
+     register: clone_start  
+   - name: Clone Start stdout  
+     debug:
+         msg: '{{ clone_start }}'
+   - name: Wait for vm to start
+     ansible.builtin.wait_for:
+        timeout: 15       
+
+   - name: Set notes of VM 
+     shell:  echo "#created by '{{ user }}' via LabAAP on '{{ currenttime }}'\n" >>/etc/pve/qemu-server/{{ randome_number }}.conf
+
+   - name: Get IP of Clone
+     ansible.builtin.shell:
+       cmd: qm agent {{ randome_number }} network-get-interfaces | grep 10.246
+     register: clone_ip
+  
+   - ansible.builtin.set_fact:
+        ip_address: "{{ clone_ip.stdout_lines[0] | regex_search('(\\d+\\.\\d+\\.\\d+\\.\\d+)') }}"   
+   
+   - name: set IP Address 
+     debug:
+       msg: "{{ ip_address }}"     
+       
+
+   - name: set IP Address var
+     set_fact:
+       IPvar: "{{ ip_address }}"     
+
+   - name: add variables to dummy host
+     ansible.builtin.add_host:
+       name: "variable_holder"    
+       distro: "{{ os }}"
+       hname: "{{ VMname }}"
+       IPset: "{{ IPvar }}"
+       vm: "{{ randome_number }}"
+
+   - name: Add instances vars to host group
+     ansible.builtin.add_host:    
+       hostname="{{ IPvar }}"  
+       groups=kvmhosts
+       ansible_connection=ssh      
+       ansible_user=kvm_user
+       ansible_password={{ pw }}
+       ansible_become_pass={{ pw }}
+       ansible_host="{{ IPvar }}"  
+
+
+- hosts: kvmhosts
+  name: Update VM O/S 
+  gather_facts: no
+  become: true
+  
+ 
+  vars:
+
+     ip_shared_variable: "{{ hostvars['variable_holder']['hname'] }}"
+     ip: "{{ hostvars['variable_holder']['IPset'] }}" 
+     dist: "{{ hostvars['variable_holder']['distro'] }}"
+
+     pw: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36353331393535663565636234363635376139643864303339376134643533666663386261313138
+          3339663666656566326431633833396364346634373139640a643161356364386264643961353566
+          63623931653862333262313138653437396261646334616665666132653564353731326336353764
+          3762396664623736330a323131346137323639626239663164663165323239653565376234353737
+          3930
+
+     pwa:  !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          62653831643666306439303762373935336430363731333166396537313564663230626534353062
+          6165376637313437346463353766323336326133383063390a316261306564656637393434353465
+          31313765326237343333323061646237643162313333316264356639643536613532393039306538
+          3334386432633765300a623932323164633064613031663437336131636162333939306433333564
+          3630
+
+  tasks:
+
+    - name: show
+      debug:
+        msg: system is {{ dist }}
+
+    - name: Update VM packages
+      tags: 
+      - Vedge
+      - RadioStarsDev
+      - Ubuntu
+      - Plano
+      - Centos
+      yum:
+       name: '*'
+       state: latest
+       update_cache: yes
+       update_only: yes
+      register: yum_update_status
+      when: 
+         - dist != "Ubuntu" or
+           dist != "Ubuntu-Plano"
+
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      register: apt_update_status
+      when: dist == "Ubuntu-Plano"    
+   
+
+    - name: Activate Cockpit
+      tags: 
+        - Vedge
+        - RadioStarsDev
+        - Ubuntu
+        - Plano
+        - Centos
+      ansible.builtin.shell:
+       cmd: sudo systemctl enable --now  cockpit.socket
+      register: Cockpit
+      when:
+        - web_interface == "Yes" 
+
+    - name: Docker install Prep RHEL and Rocky 9
+      tags: 
+      - Vedge
+      - Centos
+      yum:
+       name:
+        - yum-utils
+        - python3-pip
+       state: latest    
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky9"  
+          
+
+    - name: Docker install Prep Rocky
+      tags: Vedge
+      yum:
+       name:
+        - yum-utils
+       state: latest    
+      when:     
+        - dist == "TeamTwoRocky8" 
+
+    - name: Setup Docker repo 
+      tags: Vedge
+      become: true
+      ignore_errors: true
+      shell: |
+          sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 
+          sudo yum clean all
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Install Docker packages
+      tags: Vedge
+      become: true
+      yum:
+       name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose-plugin 
+       state: latest        
+      register: install
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+     
+    - name: Install Docker Module for Python
+      tags: Vedge
+      become: true
+      pip:
+       name: docker   
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Setup Docker
+      tags: Vedge 
+      become: true
+      shell: |
+        sudo groupadd docker
+        sudo usermod -aG docker kvm_user
+        sudo systemctl enable docker.service
+        sudo systemctl enable containerd.service      
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Remove packages not needed anymore
+      tags: 
+      - Vedge
+      - Plano
+      - Ubuntu
+      - RadioStarsDev
+      - Centos
+      yum:
+       autoremove: yes 
+      when: 
+         - dist != "Ubuntu" or
+           dist != "Ubuntu-Plano"
+          
+   
+    - name: Add Admin user
+      tags:
+      - Vedge
+      - Ubuntu
+      - Plano
+      - RadioStarsDev
+      - Centos
+      ansible.builtin.user:
+        name: admin
+        groups: wheel
+
+    - name: Add Admin user
+      ansible.builtin.user:
+        name: admin
+        groups: sudo 
+      when: dist == "Ubuntu-Plano"     
+      
+
+    - name: Set password to admin user  
+      tags: 
+      - Vedge
+      - Ubuntu
+      - RadioStarsDev
+      - Centos
+      shell: echo admin:'{{ pwa }}' | sudo chpasswd      
+   
+    
+    - name: Set the hostname sames as VM name
+      tags: 
+      - Vedge
+      - RadioStarsDev
+      - Ubuntu
+      ansible.builtin.hostname:
+        name: "{{ ip_shared_variable }}"     
+     
+    - name: Reboot the new VM and wait for it to come back up.
+      tags: 
+      - Vedge
+      - Ubuntu
+      - RadioStarsDev
+      become: true
+      reboot:     
+     
+          
+
+- name: Send Creation Completion email
+  hosts: localhost
+
+  vars:
+
+     ip_shared_variable: "{{ hostvars['variable_holder']['hname'] }}"
+     ip: "{{ hostvars['variable_holder']['IPset'] }}" 
+     dist: "{{ hostvars['variable_holder']['distro'] }}"
+     vmid: "{{ hostvars['variable_holder']['vm'] }}"
+
+  tasks:  
+
+    - name: Send email
+      community.general.mail:
+       host: webmail.kratosdefense.com
+       port: 25
+       from: william.flow@kratosdefense.com
+       to: "{{ user }}@kratosdefense.com"
+       subject: "Successful VM Creation"
+       subtype: html
+       body: '
+        <strong>{{ user }},</strong>
+        <p> Your VM named <font color="red">{{ ip_shared_variable }}</font> with a VMID of <font color="red">{{ vmid }}</font> 
+        using the <font color="red">{{ dist }} </font>template, with the IP Address of <font color="red">{{ ip }}</font> has been created.
+
+        The default username is <font color="red">kvm_user</font> and the password is <font color="red">1234</font>, 
+        please change the password as soon as possible </p>
+
+        <strong>Enjoy,</strong>
+        <p style="color:green">The InfraLab team</p>
+        '    

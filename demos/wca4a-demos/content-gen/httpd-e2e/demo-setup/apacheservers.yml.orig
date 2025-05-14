@@ -1,0 +1,16 @@
+---
+# This playbook deploys the apache web servers
+
+# Configure & Deploy the apache web servers
+- name: Top Level Apache Server Play
+  hosts: apacheservers
+  remote_user: rhel
+  become: true
+  vars:
+    http_port: 8080
+    apache_document_root: /ibmdata/htdocs
+    server_type: apache
+  roles:
+    - httpd
+    - httpd.conf
+    - index.html

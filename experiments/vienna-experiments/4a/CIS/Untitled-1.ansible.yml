@@ -1,0 +1,38 @@
+---
+- name: Restart WebSphere Application Server
+  hosts: aix
+  vars:
+    server_name: "{{ server_name }}"
+    was_user: "{{ was_user }}"
+    was_password: "{{ _was_password_ }}"
+    was_profile: "{{ was_profile }}"
+    was_service_name: "{{ was_service_name }}"
+    was_stop_script: "{{ was_stop_script }}"
+    was_start_script: "{{ was_start_script }}"
+    was_status_script: "{{ was_status_script }}"
+    log_file: "{{ log_file }}"
+  tasks:
+    - name: Stop WebSphere Server Gracefully
+      ansible.builtin.command: "{{ was_stop_script }}"
+      register: stop_output
+    - name: Wait for the process to fully terminate
+      ansible.builtin.wait_for:
+        path: /tmp/stopServer.log
+        search_regex: "{{ was_service_name }}"
+        state: absent
+        timeout: 600
+    - name: Verify the Server is Down
+      ansible.builtin.command: "{{ was_status_script }}"
+      register: status_output
+      failed_when: status_output.rc == 0
+    - name: Restart the WebSphere Server
+      ansible.builtin.command: "{{ was_start_script }}"
+      register: start_output
+    - name: Verify the Server is Running
+      ansible.builtin.command: "{{ was_status_script }}"
+      register: status_output
+      failed_when: status_output.rc != 0
+    - name: Log the Restart Operation
+      ansible.builtin.copy:
+        content: "{{ start_output.stdout }}"
+        dest: "{{ log_file }}"

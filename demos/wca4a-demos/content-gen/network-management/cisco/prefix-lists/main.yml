@@ -1,0 +1,18 @@
+---
+- name: Prefix-list playbook
+  hosts: nxosdevices
+  tasks:
+    - name: Create a prefix-list named AllowPrefix on cisco nxos device to allow {{ cisco_allow_ipv4_cidr }}
+      cisco.nxos.nxos_config:
+        lines:
+          - ip prefix-list allowprefix seq 1 permit {{ cisco_allow_ipv4_cidr }}
+        parents: ip prefix-list allowprefix
+
+
+    - name: Create a prefix-list named DenyPrefix on cisco nxos device to deny {{ cisco_deny_ipv4_cidr }}
+      cisco.nxos.nxos_config:
+        lines:
+          - ip prefix-list denyprefix seq 1 deny {{ cisco_deny_ipv4_cidr }}
+        parents: ip prefix-list denyprefix
+
+

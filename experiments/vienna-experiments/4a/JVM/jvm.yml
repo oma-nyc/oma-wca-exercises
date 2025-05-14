@@ -1,0 +1,69 @@
+---
+- name: Restart WebSphere Application Server
+  hosts: aix
+  vars:
+    server_name: "{{ server_name }}"
+    was_user: "{{ was_user }}"
+    was_password: "{{ _was_password_ }}"
+    was_profile: "{{ was_profile }}"
+    was_service_name: "{{ was_service_name }}"
+    was_stop_script: "{{ was_stop_script }}"
+    was_start_script: "{{ was_start_script }}"
+    was_status_script: "{{ was_status_script }}"
+    log_file: "{{ log_file }}"
+  tasks:
+
+    - name: Stop WebSphere Server Gracefully
+      register: stop_output
+      ansible.builtin.command: "{{ was_stop_script }}"
+
+    - name: Wait for the process to fully terminate
+      ansible.builtin.wait_for:
+        path: "{{ log_file }}"
+        search_regex: .*The server process has terminated.*
+        state: absent
+        timeout: 600
+
+    - name: Verify the Server is Down
+      register: status_output
+      ansible.builtin.command: "{{ was_status_script }}"
+
+    - name: Restart the WebSphere Server
+      register: start_output
+      ansible.builtin.command: "{{ was_start_script }}"
+
+    - name: Wait for the process to fully start
+      ansible.builtin.wait_for:
+        path: "{{ log_file }}"
+        search_regex: .*Server is now running.*
+        state: present
+        timeout: 600
+
+    - name: Verify the Server is Running
+      register: status_output
+      ansible.builtin.command: "{{ was_status_script }}"
+
+    - name: Log the Restart Operation
+      ansible.builtin.lineinfile:
+        path: "{{ log_file }}"
+        line: "{{ {'action': 'restart', 'timestamp': lookup('pipe', 'date +%Y%m%d%H%M%S'),
+          'server': server_name, 'output': start_output.stdout} | to_json }}"
+        state: present
+        insertafter: EOF
+      register: log_entry
+
+    - name: Print out the Log entry
+      ansible.builtin.debug:
+        msg: "{{ log_entry }}"
+
+    - name: Email the log entry to xyz@example.com
+      community.general.mail:
+        host: smtp.example.com
+        port: 25
+        to: benjamin12@example.com
+        from: william10@example.com
+        subject: Restart {{ server_name }}
+        body: "{{ log_entry }}"
+        secure: never
+
+

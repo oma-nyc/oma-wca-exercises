@@ -1,0 +1,8 @@
+---
+- name: OMA Full Workflow Automation Example
+  hosts: all
+  become: yes
+
+  tasks:
+
+    # Using the URL https://www.oma-services.org, execute a get request and store the response in a register named 'result'. & In the request body include a username and password field that requires being passed as a form. & Create an Ansible filter named 'deleteDataType' that takes in two parameters, a dictionary and a data type. & The filter will return an updated dictionary with the key-values corresponding with the data type removed. &  Use the 'deleteDataType' filter on the dictionary above with 'str' as a parameter and save it to a variable named 'result'. & Send an email to xyz@gmail.com with the result in the body.

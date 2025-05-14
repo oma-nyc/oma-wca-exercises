@@ -1,0 +1,22 @@
+---
+# From: https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html
+- name: kubernetes object examples
+  collections:
+    - kubernetes.core
+    - community.postgresql
+
+  tasks:
+
+    - name: Create a k8s namespace called testing
+
+    - name: Create a Service Account object called ansible-user
+
+    - name: Create a Secret object called ansible-secret
+
+    - name: Link the Secret to the Service Account
+
+    - name: Create a Service object called web using https protocol and port 8443
+
+    - name: Remove the Service object
+
+    - name: Create a Deployment object by reading the definition from a local File

@@ -1,0 +1,43 @@
+---
+- name: install latest version of postrgresql # 100% LS
+  when: postgresql_version is not defined
+  ansible.builtin.package:
+    name: postgresql
+    state: present
+
+- name: enable postgresql to start at boot
+  ansible.builtin.service:
+    name: postgresql
+    enabled: true
+    state: started
+
+- name: create a new postgres user called "tester"
+  community.postgresql.postgresql_user:
+    name: tester
+    password: "{{ _password_ }}"
+    state: present
+  become: true
+  become_user: postgres
+
+- name: create an empty database called test_data
+  community.postgresql.postgresql_db:
+    name: test_data
+    state: present
+    login_user: "{{ _login_user_ }}"
+  become_user: "{{ pg_user }}"
+  become: true
+
+- name: copy sample sql dataset
+  ansible.builtin.copy:
+    src: sample_data.sql
+    dest: /tmp
+    owner: postgres
+    group: postgres
+
+- name: populate the database with the dataset # changed variable name
+  community.postgresql.postgresql_db:
+    name: "{{ _name_ }}"
+    state: restore
+    target: /tmp/sample_data.sql
+    login_user: postgres
+  become_user: postgres

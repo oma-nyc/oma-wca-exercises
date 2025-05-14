@@ -1,0 +1,7 @@
+Generate a string that contains html and a json.
+
+With the above html, create an ansible playbook that is able to parse the html, locate the json, and extract it.
+
+As an ansible engineer; Create a nested loop.
+
+Create an anisble playbook that iterates over a list of testing IP addresses, making a call when the IP address includes a specific integer. Then print the IP addresses that were called, then the ones not called.

@@ -1,0 +1,110 @@
+---
+- name: Deploy IBM MQ on OpenShift with a route
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - kubernetes.core
+    - openshift
+  tasks:
+    - name: Create a new project
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: mq-project
+    - name: Create a new secret
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: mq-admin-password
+            namespace: mq-project
+          type: Opaque
+          stringData:
+            password: "{{ _password_ }}"
+    - name: Create a new deployment
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mq-deployment
+            namespace: mq-project
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: mq
+            template:
+              metadata:
+                labels:
+                  app: mq
+              spec:
+                containers:
+                  - name: mq
+                    image: icr.io/cpopen/ibm-mq:9.2.4.40-r1
+                    ports:
+                      - containerPort: 1414
+                      - containerPort: 9443
+                    env:
+                      - name: LICENSE
+                        value: accept
+                      - name: MQ_QMGR_NAME
+                        value: QM1
+                      - name: MQ_APP_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: mq-admin-password
+                            key: password
+                      - name: MQ_ADMIN_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: mq-admin-password
+                            key: password
+                      - name: MQ_ENABLE_TLS
+                        value: "true"
+                      - name: MQ_TLS_KEYSTORE_DIR
+                        value: /run/secrets/tls
+                      - name: MQ_TLS_PASSPHRASE
+                        valueFrom:
+                          secretKeyRef:
+                            name: mq-admin-password
+                            key: password
+                    volumeMounts:
+                      - name: mq-tls-volume
+                        mountPath: /run/secrets/tls
+                        readOnly: true
+                volumes:
+                  - name: mq-tls-volume
+                    secret:
+                      secretName: "{{ _secretname_ }}"
+    - name: Create a new service
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: mq-service
+            namespace: mq-project
+          spec:
+            ports:
+              - port: 1414
+                targetPort: 1414
+              - port: 9443
+                targetPort: 9443
+            selector:
+              app: mq
+    - name: Create a new route
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: mq-route
+            namespace: mq-project
+          spec:
+            to:
+              kind: Service
+              name: mq-service
+            port:
+              targetPort: 9443

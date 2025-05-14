@@ -1,0 +1,11 @@
+---
+- name: Manage z/OS jobs
+  hosts: zos_host
+  gather_facts: false
+  collections:
+    - ibm.ibm_zos_core
+
+  tasks:
+    - name: Submit TESTJCL Job
+
+    - name: Retrieve TESTJCL job output
