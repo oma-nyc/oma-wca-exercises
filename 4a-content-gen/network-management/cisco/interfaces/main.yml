@@ -1,8 +1,0 @@
----
-- name: Interfaces Playbook
-  hosts: nxosdevices
-  connection: local
-  tasks:
-    - name: Set the description for nxos interface Ethernet2 to "Hello world"
-
-    - name: Configure nxos interface Ethernet2/1 to use dhcp

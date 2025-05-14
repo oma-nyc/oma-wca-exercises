@@ -1,7 +1,0 @@
----
-- name: L3 Interfaces Playbook
-  hosts: nxosdevices
-  tasks:
-    - name: Add ipv4 address 192.168.1.132/24 to nxos interface Ethernet 0/0/0/0
-
-    - name: Add ipv6 address fd00:234:3ff:3ff::1/64 to nxos interface Ethernet 0/0/0/0

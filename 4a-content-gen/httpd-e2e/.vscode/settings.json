@@ -1,7 +1,0 @@
-{
-    "ansible.python.interpreterPath": "/Users/mju/Developer/2024THINK/env/bin/python3",
-    "files.exclude": {
-        "**/.vscode": true,
-        "**/demo-setup": true
-    }
-}
