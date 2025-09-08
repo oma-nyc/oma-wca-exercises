@@ -1,0 +1,246 @@
+---
+- name: Deploy IBM MQ on OpenShift with Vault and Optimizations
+  hosts: localhost
+  gather_facts: no
+  vars:
+    image: ibmmq/mq:9.2.0.1
+    license_acceptance: accept-secure
+    qmgr_name: QM1
+    node_port: 30001
+    memory_request: "64Mi"
+    memory_limit: "128Mi"
+    cpu_request: "250m"
+    cpu_limit: "500m"
+    vault_url: "https://<vault_address>:8200"
+    vault_role_id: <approle_id>
+    vault_secret_id: <approle_secret_id>
+    vault_password_file: vault_token.txt
+
+  tasks:
+    - name: Check if MQ namespace exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: mq-namespace
+      register: namespace_result
+      failed_when: namespace_result.skipped
+
+    - name: Create MQ namespace if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Namespace
+          apiVersion: v1
+          metadata:
+            name: mq-namespace
+
+    - name: Check if MQ service account exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: ServiceAccount
+          apiVersion: v1
+          metadata:
+            name: mq-service-account
+            namespace: mq-namespace
+      register: sa_result
+      failed_when: sa_result.skipped
+
+    - name: Create MQ service account if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: ServiceAccount
+          apiVersion: v1
+          metadata:
+            name: mq-service-account
+            namespace: mq-namespace
+
+    - name: Check if MQ role and role binding exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: mq-role
+            namespace: mq-namespace
+      register: role_result
+      failed_when: role_result.skipped
+
+    - name: Check if MQ role binding exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: mq-role-binding
+            namespace: mq-namespace
+      register: rb_result
+      failed_when: rb_result.skipped
+
+    - name: Create MQ role if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: mq-role
+            namespace: mq-namespace
+          rules:
+            - apiGroups: [""]
+              resources: ["pods", "pods/exec", "services", "endpoints", "persistentvolumeclaims"]
+              verbs: ["get", "list", "watch"]
+            - apiGroups: [""]
+              resources: ["nodes"]
+              verbs: ["get", "list", "watch"]
+        tags:
+          - mq-role-binding
+      tags:
+        - mq-role-binding
+
+    - name: Create role binding if it does not exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: mq-role-binding
+            namespace: mq-namespace
+
+    - name: Get admin password from Vault
+      community.general.vault:
+        url: "{{ vault_url }}"
+        role_id: "{{ vault_role_id }}"
+        secret_id: "{{ vault_secret_id }}"
+        policy: "secret/data/mq/admin_password"
+        mount_point: "secret"
+        password_file: "{{ vault_password_file }}"
+      register: vault_result
+
+    - name: Set admin password variable
+      set_fact:
+        admin_password: "{{ vault_result.data.data.secret.admin_password }}"
+
+    - name: Check if MQ deployment exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Deployment
+          apiVersion: apps/v1
+          metadata:
+            name: mq-deployment
+            namespace: mq-namespace
+      register: deployment_result
+      failed_when: deployment_result.skipped
+
+    - name: Create MQ deployment if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Deployment
+          apiVersion: apps/v1
+          metadata:
+            name: mq-deployment
+            namespace: mq-namespace
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: mq
+            template:
+              metadata:
+                labels:
+                  app: mq
+              spec:
+                serviceAccountName: mq-service-account
+                containers:
+                - name: mq
+                  image: "{{ image }}"
+                  env:
+                  - name: LICENSE
+                    value: "{{ license_acceptance }}"
+                  - name: MQ_QMGR_NAME
+                    value: "{{ qmgr_name }}"
+                  - name: MQ_ADMIN_PASSWORD
+                    value: "{{ admin_password }}"
+                  resources:
+                    requests:
+                      memory: "{{ memory_request }}"
+                      cpu: "{{ cpu_request }}"
+                    limits:
+                      memory: "{{ memory_limit }}"
+                      cpu: "{{ cpu_limit }}"
+                imagePullSecrets:
+                - name: regcred
+                volumeMounts:
+                - name: mq-data
+                  mountPath: /var/mqm
+            volumes:
+            - name: mq-data
+              persistentVolumeClaim:
+                claimName: mq-pvc
+
+    - name: Check if MQ service exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Service
+          apiVersion: v1
+          metadata:
+            name: mq-service
+            namespace: mq-namespace
+      register: service_result
+      failed_when: service_result.skipped
+
+    - name: Create MQ service if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Service
+          apiVersion: v1
+          metadata:
+            name: mq-service
+            namespace: mq-namespace
+          spec:
+            type: NodePort
+            ports:
+            - port: 1414
+              targetPort: 1414
+              nodePort: "{{ node_port }}"
+            selector:
+              app: mq
+
+    - name: Check if MQ PVC exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: mq-pvc
+            namespace: mq-namespace
+      register: pvc_result
+      failed_when: pvc_result.skipped
+
+    - name: Create MQ PVC if it doesn't exist
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          metadata:
+            name: mq-pvc
+            namespace: mq-namespace
+          spec:
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 1Gi
+
