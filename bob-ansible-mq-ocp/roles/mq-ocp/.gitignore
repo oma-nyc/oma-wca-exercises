@@ -1,0 +1,51 @@
+# Ansible
+*.retry
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Molecule
+.molecule/
+.cache/
+molecule/*/.molecule/
+molecule/*/tests/__pycache__/
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Vault
+.vault_pass.txt
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+.tmp/

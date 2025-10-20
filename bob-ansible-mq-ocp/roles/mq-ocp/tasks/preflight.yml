@@ -1,0 +1,87 @@
+---
+# tasks/preflight.yml
+#
+# Preflight checks for mq-ocp role
+#
+# This file implements preflight checks to ensure all prerequisites are met
+# before deploying IBM MQ on OpenShift.
+
+- name: Verify OpenShift version
+  ansible.builtin.assert:
+    that:
+      - openshift_version is defined
+      - openshift_version is version('4.18', '>=')
+    fail_msg: "OpenShift version must be 4.18 or higher"
+    success_msg: "OpenShift version requirement met"
+  tags:
+    - preflight
+    - verify
+
+- name: Verify required collections are installed
+  ansible.builtin.assert:
+    that:
+      - "'kubernetes.core' in lookup('ansible.builtin.list_collections')"
+      - "'community.hashi_vault' in lookup('ansible.builtin.list_collections')"
+    fail_msg: "Required collections not installed. Please install kubernetes.core and community.hashi_vault collections"
+    success_msg: "Required collections are installed"
+  tags:
+    - preflight
+    - verify
+
+- name: Verify Vault connectivity
+  community.hashi_vault.vault_read:
+    url: "{{ vault_addr }}"
+    auth_method: "{{ vault_auth_method }}"
+    token: "{{ vault_token | default(omit) }}"
+    role_id: "{{ vault_role_id | default(omit) }}"
+    secret_id: "{{ vault_secret_id | default(omit) }}"
+    path: sys/health
+  register: vault_health
+  failed_when: vault_health.status != 200
+  tags:
+    - preflight
+    - vault
+    - verify
+
+- name: Verify OpenShift CLI is installed
+  ansible.builtin.command: which oc
+  register: oc_check
+  changed_when: false
+  failed_when: oc_check.rc != 0
+  tags:
+    - preflight
+    - verify
+
+- name: Verify OpenShift login status
+  ansible.builtin.command: oc whoami
+  register: oc_whoami
+  changed_when: false
+  failed_when: oc_whoami.rc != 0
+  tags:
+    - preflight
+    - verify
+
+- name: Check for required Python modules
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: present
+    extra_args: --dry-run
+  loop: "{{ required_python_modules }}"
+  register: pip_check
+  changed_when: false
+  failed_when: pip_check.failed
+  tags:
+    - preflight
+    - verify
+
+- name: Verify IBM MQ image is accessible
+  ansible.builtin.command: >
+    oc image info {{ mq_image }}:{{ mq_version }}
+  register: image_check
+  changed_when: false
+  failed_when: image_check.rc != 0
+  tags:
+    - preflight
+    - verify
+
+# Made with Bob

@@ -1,0 +1,46 @@
+---
+# .ansible-lint configuration for IBM MQ on OpenShift role
+
+# Exclude specific rules
+skip_list:
+  # Allow long lines in templates and tasks
+  - 'yaml[line-length]'
+  # Allow Jinja templating in when statements
+  - 'no-jinja-when'
+  # Allow using handlers for notifications
+  - 'no-handler'
+  # Allow using changed_when for commands
+  - 'command-instead-of-module'
+  # Allow using command module with pipefail
+  - 'command-instead-of-shell'
+
+# Enable specific rules
+enable_list:
+  # Ensure tasks have a name
+  - 'name[missing]'
+  # Ensure YAML files have consistent formatting
+  - 'yaml'
+  # Ensure role variables are used
+  - 'role-name'
+
+# Exclude directories from linting
+exclude_paths:
+  - .cache/
+  - .github/
+  - molecule/*/tests/
+  - molecule/*/.molecule/
+
+# Use parseable output format
+parseable: true
+
+# Be quiet about skipped rules
+quiet: false
+
+# Use colored output
+use_default_rules: true
+verbosity: 1
+
+# Ensure YAML files have consistent formatting
+yaml_file_patterns:
+  - '*.yml'
+  - '*.yaml'

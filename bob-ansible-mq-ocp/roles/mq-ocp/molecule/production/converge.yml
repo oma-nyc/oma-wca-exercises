@@ -1,0 +1,42 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Include mq-ocp role"
+      include_role:
+        name: "mq-ocp"
+      vars:
+        # Production-specific variables
+        mq_namespace: "mq-prod"
+        mq_qmgr_name: "PRODQM"
+        mq_replicas: 3
+        
+        # High availability configuration
+        mq_cpu_request: "1"
+        mq_memory_request: "1Gi"
+        mq_cpu_limit: "2"
+        mq_memory_limit: "2Gi"
+        mq_storage_size: "10Gi"
+        mq_storage_class: "managed-premium"
+        
+        # Security hardening
+        mq_enable_security_hardening: true
+        mq_enable_network_policies: true
+        mq_enable_pod_security: true
+        
+        # TLS configuration
+        mq_enable_tls: true
+        mq_tls_secret_name: "mq-tls-secret"
+        
+        # Mock Vault integration for testing
+        vault_addr: "{{ lookup('env', 'VAULT_ADDR') | default('http://mock-vault:8200', true) }}"
+        vault_auth_method: "token"
+        vault_token: "{{ lookup('env', 'VAULT_TOKEN') | default('mock-token', true) }}"
+        
+        # Validation
+        mq_validate_deployment: true
+        mq_validation_retries: 15
+        mq_validation_delay: 20
+
+# Made with Bob

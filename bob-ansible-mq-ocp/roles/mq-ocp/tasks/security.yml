@@ -1,0 +1,103 @@
+---
+# tasks/security.yml
+#
+# Security context constraints for mq-ocp role
+# Specific to OpenShift 4.18 or higher
+#
+# This file implements security context constraints (SCCs) for IBM MQ on OpenShift 4.18.
+# SCCs are unique to OpenShift and control the security context of pods.
+#
+# OpenShift 4.18 includes enhanced security features and stricter defaults.
+# This implementation follows best practices for OpenShift 4.18 security.
+
+- name: Verify OpenShift version for security context constraints
+  ansible.builtin.assert:
+    that:
+      - openshift_version is defined
+      - openshift_version is version('4.18', '>=')
+    fail_msg: "OpenShift version must be 4.18 or higher for these security configurations"
+    success_msg: "OpenShift version requirement met for security configurations"
+  tags:
+    - security
+    - setup
+
+- name: Create security context constraints for IBM MQ
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: security.openshift.io/v1
+      kind: SecurityContextConstraints
+      metadata:
+        name: "{{ mq_scc_name }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+      allowHostDirVolumePlugin: false
+      allowHostIPC: false
+      allowHostNetwork: false
+      allowHostPID: false
+      allowHostPorts: false
+      allowPrivilegeEscalation: true
+      allowPrivilegedContainer: false
+      # OpenShift 4.18 supports fine-grained capability management
+      allowedCapabilities:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - FSETID
+      - KILL
+      - SETGID
+      - SETUID
+      defaultAddCapabilities: null
+      fsGroup:
+        type: RunAsAny
+      groups: []
+      priority: 0
+      readOnlyRootFilesystem: false
+      requiredDropCapabilities:
+      - ALL
+      runAsUser:
+        type: RunAsAny
+      # OpenShift 4.18 enhanced SELinux support
+      seLinuxContext:
+        type: MustRunAs
+      supplementalGroups:
+        type: RunAsAny
+      users:
+      - system:serviceaccount:{{ mq_namespace }}:{{ mq_service_account }}
+      volumes:
+      - configMap
+      - downwardAPI
+      - emptyDir
+      - persistentVolumeClaim
+      - projected
+      - secret
+      # OpenShift 4.18 supports CSI volumes
+      - csi
+      # OpenShift 4.18 supports ephemeral volumes
+      - ephemeral
+  register: scc_result
+  tags:
+    - security
+    - setup
+
+- name: Create Pod Security admission labels for namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ mq_namespace }}"
+        labels:
+          # OpenShift 4.18 uses Kubernetes Pod Security Standards
+          pod-security.kubernetes.io/enforce: baseline
+          pod-security.kubernetes.io/audit: restricted
+          pod-security.kubernetes.io/warn: restricted
+  when: openshift_version is version('4.18', '>=')
+  tags:
+    - security
+    - setup
+    - namespace
+
+# Made with Bob
