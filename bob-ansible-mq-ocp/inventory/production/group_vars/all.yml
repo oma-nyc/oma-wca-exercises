@@ -1,0 +1,30 @@
+---
+# inventory/production/group_vars/all.yml
+#
+# Production group variables for IBM MQ on OpenShift deployment
+#
+# This file contains production-specific variables.
+
+mq_namespace: "mq-prod"
+mq_qmgr_name: "PRODQM"
+mq_replicas: 2
+mq_cpu_request: "1"
+mq_memory_request: "1Gi"
+mq_cpu_limit: "2"
+mq_memory_limit: "2Gi"
+mq_storage_size: "5Gi"
+
+# Production-specific settings
+mq_create_network_policy: true
+mq_create_resource_quota: true
+mq_create_pod_disruption_budget: true
+
+# High availability settings
+mq_update_strategy: "RollingUpdate"
+mq_max_surge: 1
+mq_max_unavailable: 0
+
+# Security settings
+mq_enable_tls: true
+
+# Made with Bob

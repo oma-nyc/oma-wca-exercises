@@ -1,0 +1,191 @@
+---
+# tasks/deployment.yml
+#
+# MQ deployment for mq-ocp role
+# Specific to OpenShift 4.18 or higher
+#
+# This file implements the deployment of IBM MQ on OpenShift 4.18.
+# It includes OpenShift 4.18 specific features and best practices.
+
+- name: Create ConfigMap for IBM MQ configuration
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ mq_config_map_name }}"
+        namespace: "{{ mq_namespace }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+          app: "{{ mq_app_label }}"
+      data:
+        mq.ini: "{{ mq_custom_ini }}"
+  tags:
+    - deployment
+    - mq
+    - config
+
+- name: Create deployment for IBM MQ
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ mq_deployment_name }}"
+        namespace: "{{ mq_namespace }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+          app: "{{ mq_app_label }}"
+      spec:
+        replicas: "{{ mq_replicas }}"
+        selector:
+          matchLabels:
+            app: "{{ mq_app_label }}"
+        strategy:
+          type: "{{ mq_update_strategy }}"
+          rollingUpdate:
+            maxSurge: "{{ mq_max_surge }}"
+            maxUnavailable: "{{ mq_max_unavailable }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ mq_app_label }}"
+              app.kubernetes.io/name: ibm-mq
+              app.kubernetes.io/managed-by: ansible
+            # OpenShift 4.18 supports annotations for pod-level metrics
+            annotations:
+              prometheus.io/scrape: "{{ mq_enable_prometheus | ternary('true', 'false') }}"
+              prometheus.io/port: "{{ mq_prometheus_port }}"
+              prometheus.io/path: "/metrics"
+          spec:
+            serviceAccountName: "{{ mq_service_account }}"
+            # OpenShift 4.18 enhanced security context
+            securityContext: "{{ mq_pod_security_context }}"
+            # OpenShift 4.18 supports topology spread constraints
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: ScheduleAnyway
+                labelSelector:
+                  matchLabels:
+                    app: "{{ mq_app_label }}"
+            containers:
+              - name: "{{ mq_container_name }}"
+                image: "{{ mq_image }}:{{ mq_version }}"
+                imagePullPolicy: "{{ mq_image_pull_policy }}"
+                securityContext: "{{ mq_container_security_context }}"
+                env: 
+                  - name: LICENSE
+                    value: "{{ mq_license }}"
+                  - name: MQ_QMGR_NAME
+                    value: "{{ mq_qmgr_name }}"
+                  - name: MQ_ENABLE_METRICS
+                    value: "{{ mq_enable_prometheus | ternary('true', 'false') }}"
+                  - name: MQ_ADMIN_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ mq_admin_secret_name }}"
+                        key: password
+                  - name: MQ_APP_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: "{{ mq_admin_secret_name }}"
+                        key: password
+                ports: "{{ mq_container_ports }}"
+                resources:
+                  requests:
+                    cpu: "{{ mq_cpu_request }}"
+                    memory: "{{ mq_memory_request }}"
+                  limits:
+                    cpu: "{{ mq_cpu_limit }}"
+                    memory: "{{ mq_memory_limit }}"
+                # OpenShift 4.18 enhanced probes
+                livenessProbe:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - dspmq -m {{ mq_qmgr_name }} | grep RUNNING
+                  initialDelaySeconds: "{{ mq_liveness_probe.initialDelaySeconds }}"
+                  periodSeconds: "{{ mq_liveness_probe.periodSeconds }}"
+                  timeoutSeconds: "{{ mq_liveness_probe.timeoutSeconds }}"
+                  failureThreshold: "{{ mq_liveness_probe.failureThreshold }}"
+                readinessProbe:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - dspmq -m {{ mq_qmgr_name }} | grep RUNNING
+                  initialDelaySeconds: "{{ mq_readiness_probe.initialDelaySeconds }}"
+                  periodSeconds: "{{ mq_readiness_probe.periodSeconds }}"
+                  timeoutSeconds: "{{ mq_readiness_probe.timeoutSeconds }}"
+                  failureThreshold: "{{ mq_readiness_probe.failureThreshold }}"
+                # OpenShift 4.18 supports startup probes
+                startupProbe:
+                  exec:
+                    command:
+                      - /bin/bash
+                      - -c
+                      - dspmq -m {{ mq_qmgr_name }}
+                  initialDelaySeconds: 10
+                  periodSeconds: 5
+                  failureThreshold: 30
+                volumeMounts:
+                  - name: data
+                    mountPath: /var/mqm
+                  - name: config
+                    mountPath: /etc/mqm/mq.ini
+                    subPath: mq.ini
+                  {% if mq_enable_tls | default(false) | bool %}
+                  - name: tls
+                    mountPath: /etc/mqm/pki/keys/{{ mq_qmgr_name }}
+                    readOnly: true
+                  {% endif %}
+            # OpenShift 4.18 supports node affinity and tolerations
+            nodeSelector: "{{ mq_node_selector }}"
+            tolerations: "{{ mq_tolerations }}"
+            affinity: "{{ mq_affinity }}"
+            # OpenShift 4.18 supports image pull secrets
+            imagePullSecrets: "{{ mq_image_pull_secrets }}"
+            volumes:
+              - name: data
+                persistentVolumeClaim:
+                  claimName: "{{ mq_pvc_name }}"
+              - name: config
+                configMap:
+                  name: "{{ mq_config_map_name }}"
+              {% if mq_enable_tls | default(false) | bool %}
+              - name: tls
+                secret:
+                  secretName: "{{ mq_tls_secret_name | default('mq-tls-secret') }}"
+              {% endif %}
+  register: deployment_result
+  tags:
+    - deployment
+    - mq
+
+- name: Wait for deployment to be ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ mq_deployment_name }}"
+    namespace: "{{ mq_namespace }}"
+  register: deployment_status
+  until: 
+    - deployment_status.resources is defined
+    - deployment_status.resources | length > 0
+    - deployment_status.resources[0].status is defined
+    - deployment_status.resources[0].status.availableReplicas is defined
+    - deployment_status.resources[0].status.availableReplicas == mq_replicas
+  retries: 10
+  delay: 10
+  when: deployment_result.changed
+  tags:
+    - deployment
+    - mq
+
+# Made with Bob

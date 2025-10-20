@@ -1,0 +1,264 @@
+---
+# tasks/main.yml
+#
+# Main tasks file for mq-ocp role
+#
+# This file serves as the entry point for the role and includes all other task files
+# in the correct order. Each included task file handles a specific aspect of the
+# IBM MQ on OpenShift deployment.
+#
+# The role follows a modular design where each component is implemented in a separate
+# task file. This allows for:
+# - Better organization and maintainability
+# - Easier collaboration among team members
+# - Selective execution using tags
+#
+# Task files are included in a logical order that respects dependencies between components.
+# Each include_tasks statement has appropriate tags to allow selective execution.
+#
+# Author: Your Team
+# Last Updated: 2025-10-20
+#
+# Changelog:
+# - 2025-10-20: Initial version
+#
+# Usage:
+# This file should not be modified directly unless adding or removing task files.
+# To modify the behavior of specific components, edit the corresponding task file.
+
+- name: Set up argument specification
+  ansible.builtin.set_fact:
+    argument_spec:
+      mq_namespace:
+        type: str
+        required: true
+        description: OpenShift namespace for IBM MQ deployment
+      mq_service_account:
+        type: str
+        required: true
+        description: Service account name for IBM MQ
+      mq_scc_name:
+        type: str
+        required: true
+        description: Security context constraints name
+      mq_pvc_name:
+        type: str
+        required: true
+        description: Persistent volume claim name
+      mq_storage_size:
+        type: str
+        required: true
+        description: Storage size for MQ data
+      mq_storage_class:
+        type: str
+        required: false
+        description: Storage class for MQ data
+      mq_deployment_name:
+        type: str
+        required: true
+        description: Deployment name
+      mq_app_label:
+        type: str
+        required: true
+        description: App label for selectors
+      mq_container_name:
+        type: str
+        required: true
+        description: Container name
+      mq_image:
+        type: str
+        required: true
+        description: IBM MQ image
+      mq_version:
+        type: str
+        required: true
+        description: IBM MQ version
+      mq_license:
+        type: str
+        required: true
+        description: IBM MQ license acceptance
+      mq_qmgr_name:
+        type: str
+        required: true
+        description: Queue manager name
+      mq_admin_secret_name:
+        type: str
+        required: true
+        description: Admin secret name
+      mq_service_name:
+        type: str
+        required: true
+        description: Service name
+      mq_service_type:
+        type: str
+        required: false
+        default: ClusterIP
+        description: Service type
+      mq_route_name:
+        type: str
+        required: true
+        description: Route name
+      mq_replicas:
+        type: int
+        required: false
+        default: 1
+        description: Number of replicas
+      mq_cpu_request:
+        type: str
+        required: false
+        default: "500m"
+        description: CPU request
+      mq_memory_request:
+        type: str
+        required: false
+        default: "512Mi"
+        description: Memory request
+      mq_cpu_limit:
+        type: str
+        required: false
+        default: "1"
+        description: CPU limit
+      mq_memory_limit:
+        type: str
+        required: false
+        default: "1Gi"
+        description: Memory limit
+      vault_addr:
+        type: str
+        required: true
+        description: Vault server address
+      vault_auth_method:
+        type: str
+        required: true
+        description: Vault authentication method
+      vault_token:
+        type: str
+        required: false
+        description: Vault token
+      vault_role_id:
+        type: str
+        required: false
+        description: Vault AppRole role ID
+      vault_secret_id:
+        type: str
+        required: false
+        description: Vault AppRole secret ID
+      vault_secret_path:
+        type: str
+        required: true
+        description: Vault secret path
+      mq_config_map_name:
+        type: str
+        required: true
+        description: ConfigMap name for MQ configuration
+      mq_role_name:
+        type: str
+        required: true
+        description: Role name for MQ service account
+      mq_role_binding_name:
+        type: str
+        required: true
+        description: Role binding name for MQ service account
+      openshift_version:
+        type: str
+        required: true
+        description: OpenShift version
+
+- name: Validate parameters
+  ansible.builtin.assert:
+    that:
+      - mq_namespace is defined
+      - mq_service_account is defined
+      - mq_scc_name is defined
+      - mq_pvc_name is defined
+      - mq_storage_size is defined
+      - mq_deployment_name is defined
+      - mq_app_label is defined
+      - mq_container_name is defined
+      - mq_image is defined
+      - mq_version is defined
+      - mq_license is defined
+      - mq_qmgr_name is defined
+      - mq_admin_secret_name is defined
+      - mq_service_name is defined
+      - mq_route_name is defined
+      - vault_addr is defined
+      - vault_auth_method is defined
+      - vault_secret_path is defined
+      - mq_config_map_name is defined
+      - mq_role_name is defined
+      - mq_role_binding_name is defined
+      - openshift_version is defined
+    fail_msg: "Missing required parameters"
+    success_msg: "All required parameters are provided"
+  tags:
+    - always
+
+- name: Include preflight checks
+  ansible.builtin.include_tasks: preflight.yml
+  tags:
+    - always
+
+- name: Include Hashicorp Vault integration
+  ansible.builtin.include_tasks: vault.yml
+  tags:
+    - vault
+    - security
+
+- name: Include namespace creation
+  ansible.builtin.include_tasks: namespace.yml
+  tags:
+    - namespace
+    - setup
+
+- name: Include security context constraints
+  ansible.builtin.include_tasks: security.yml
+  tags:
+    - security
+    - setup
+
+- name: Include service account creation
+  ansible.builtin.include_tasks: service_account.yml
+  tags:
+    - service_account
+    - setup
+
+- name: Include persistent volume claims
+  ansible.builtin.include_tasks: pvc.yml
+  tags:
+    - pvc
+    - storage
+
+- name: Include OpenShift 4.18 specific configurations
+  ansible.builtin.include_tasks: openshift_4_18.yml
+  when: openshift_version is version('4.18', '>=')
+  tags:
+    - openshift
+    - setup
+
+- name: Include MQ deployment
+  ansible.builtin.include_tasks: deployment.yml
+  tags:
+    - deployment
+    - mq
+
+- name: Include service creation
+  ansible.builtin.include_tasks: service.yml
+  tags:
+    - service
+    - networking
+
+- name: Include route creation
+  ansible.builtin.include_tasks: route.yml
+  tags:
+    - route
+    - networking
+
+- name: Include post-deployment validation
+  ansible.builtin.include_tasks: validation.yml
+  when: mq_validate_deployment | bool
+  tags:
+    - validation
+    - verify
+
+# Made with Bob

@@ -1,0 +1,206 @@
+---
+# tasks/validation.yml
+#
+# Post-deployment validation for mq-ocp role
+#
+# This file implements comprehensive validation checks for the IBM MQ deployment.
+# It verifies that all components are properly deployed and functioning.
+
+- name: Wait for IBM MQ deployment to be ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ mq_deployment_name }}"
+    namespace: "{{ mq_namespace }}"
+  register: mq_deployment_status
+  until: 
+    - mq_deployment_status.resources is defined
+    - mq_deployment_status.resources | length > 0
+    - mq_deployment_status.resources[0].status is defined
+    - mq_deployment_status.resources[0].status.availableReplicas is defined
+    - mq_deployment_status.resources[0].status.availableReplicas == mq_replicas
+  retries: "{{ mq_validation_retries }}"
+  delay: "{{ mq_validation_delay }}"
+  tags:
+    - validation
+    - verify
+
+- name: Get IBM MQ pod name
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ mq_namespace }}"
+    label_selectors:
+      - app={{ mq_app_label }}
+  register: mq_pods
+  tags:
+    - validation
+    - verify
+
+- name: Verify IBM MQ pod is running
+  ansible.builtin.assert:
+    that:
+      - mq_pods.resources is defined
+      - mq_pods.resources | length > 0
+      - mq_pods.resources[0].status.phase == "Running"
+    fail_msg: "IBM MQ pod is not running"
+    success_msg: "IBM MQ pod is running"
+  tags:
+    - validation
+    - verify
+
+- name: Set MQ pod name fact
+  ansible.builtin.set_fact:
+    mq_pod_name: "{{ mq_pods.resources[0].metadata.name }}"
+  when: 
+    - mq_pods.resources is defined
+    - mq_pods.resources | length > 0
+  tags:
+    - validation
+    - verify
+
+- name: Verify IBM MQ service is available
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: "{{ mq_service_name }}"
+    namespace: "{{ mq_namespace }}"
+  register: mq_service_status
+  failed_when: 
+    - mq_service_status.resources is not defined or mq_service_status.resources | length == 0
+  tags:
+    - validation
+    - verify
+
+- name: Verify IBM MQ route is available (if enabled)
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: "{{ mq_route_name }}"
+    namespace: "{{ mq_namespace }}"
+  register: mq_route_status
+  failed_when: 
+    - mq_expose_web_console | bool
+    - (mq_route_status.resources is not defined or mq_route_status.resources | length == 0)
+  tags:
+    - validation
+    - verify
+
+- name: Check IBM MQ queue manager status
+  kubernetes.core.k8s_exec:
+    namespace: "{{ mq_namespace }}"
+    pod: "{{ mq_pod_name }}"
+    command: dspmq -m {{ mq_qmgr_name }}
+  register: mq_qmgr_status
+  failed_when: "'RUNNING' not in mq_qmgr_status.stdout"
+  when: mq_pod_name is defined
+  tags:
+    - validation
+    - verify
+
+- name: Create test queue for validation (if enabled)
+  kubernetes.core.k8s_exec:
+    namespace: "{{ mq_namespace }}"
+    pod: "{{ mq_pod_name }}"
+    command: runmqsc {{ mq_qmgr_name }}
+    stdin: |
+      DEFINE QLOCAL(TEST.QUEUE) REPLACE
+      DISPLAY QLOCAL(TEST.QUEUE)
+      END
+  register: mq_test_queue
+  when: 
+    - mq_pod_name is defined
+    - mq_create_test_queue | default(true) | bool
+  tags:
+    - validation
+    - verify
+    - test
+
+- name: Put test message on queue (if enabled)
+  kubernetes.core.k8s_exec:
+    namespace: "{{ mq_namespace }}"
+    pod: "{{ mq_pod_name }}"
+    command: /bin/bash -c "echo 'Test message' | /opt/mqm/samp/bin/amqsput TEST.QUEUE {{ mq_qmgr_name }}"
+  register: mq_put_message
+  when: 
+    - mq_pod_name is defined
+    - mq_create_test_queue | default(true) | bool
+    - mq_test_queue is defined
+    - mq_test_queue.rc == 0
+  tags:
+    - validation
+    - verify
+    - test
+
+- name: Get test message from queue (if enabled)
+  kubernetes.core.k8s_exec:
+    namespace: "{{ mq_namespace }}"
+    pod: "{{ mq_pod_name }}"
+    command: /opt/mqm/samp/bin/amqsget TEST.QUEUE {{ mq_qmgr_name }}
+  register: mq_get_message
+  when: 
+    - mq_pod_name is defined
+    - mq_create_test_queue | default(true) | bool
+    - mq_put_message is defined
+    - mq_put_message.rc == 0
+  tags:
+    - validation
+    - verify
+    - test
+
+- name: Verify test message was retrieved successfully
+  ansible.builtin.assert:
+    that:
+      - mq_get_message is defined
+      - mq_get_message.rc == 0
+      - "'Test message' in mq_get_message.stdout"
+    fail_msg: "Failed to retrieve test message from queue"
+    success_msg: "Successfully retrieved test message from queue"
+  when: 
+    - mq_pod_name is defined
+    - mq_create_test_queue | default(true) | bool
+    - mq_get_message is defined
+  tags:
+    - validation
+    - verify
+    - test
+
+- name: Delete test queue (if enabled)
+  kubernetes.core.k8s_exec:
+    namespace: "{{ mq_namespace }}"
+    pod: "{{ mq_pod_name }}"
+    command: runmqsc {{ mq_qmgr_name }}
+    stdin: |
+      DELETE QLOCAL(TEST.QUEUE)
+      END
+  when: 
+    - mq_pod_name is defined
+    - mq_create_test_queue | default(true) | bool
+    - mq_test_queue is defined
+    - mq_test_queue.rc == 0
+    - mq_cleanup_test_queue | default(true) | bool
+  tags:
+    - validation
+    - verify
+    - test
+    - cleanup
+
+- name: Display validation results
+  ansible.builtin.debug:
+    msg: 
+      - "IBM MQ deployment validation completed successfully"
+      - "Queue Manager: {{ mq_qmgr_name }}"
+      - "Namespace: {{ mq_namespace }}"
+      - "Web Console URL: {{ mq_expose_web_console | bool and mq_route_status.resources is defined and mq_route_status.resources | length > 0 | ternary('https://' + mq_route_status.resources[0].spec.host, 'Not exposed') }}"
+      - "Pod Name: {{ mq_pod_name | default('Not available') }}"
+      - "Queue Manager Status: {{ mq_qmgr_status.stdout | default('Not available') }}"
+  when: 
+    - mq_deployment_status.resources is defined
+    - mq_deployment_status.resources | length > 0
+    - mq_service_status.resources is defined
+    - mq_service_status.resources | length > 0
+  tags:
+    - validation
+    - verify
+
+# Made with Bob

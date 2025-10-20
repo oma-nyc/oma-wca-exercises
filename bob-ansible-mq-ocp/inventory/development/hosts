@@ -1,0 +1,11 @@
+# inventory/development/hosts
+#
+# Development inventory file for IBM MQ on OpenShift deployment
+#
+# This file defines the hosts for the development deployment.
+
+[local]
+localhost ansible_connection=local
+
+[all:vars]
+ansible_python_interpreter=auto

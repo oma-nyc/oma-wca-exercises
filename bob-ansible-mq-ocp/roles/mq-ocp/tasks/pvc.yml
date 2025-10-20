@@ -1,0 +1,70 @@
+---
+# tasks/pvc.yml
+#
+# Persistent volume claims for mq-ocp role
+#
+# This file implements the creation of persistent volume claims for IBM MQ data.
+
+- name: Create persistent volume claim for IBM MQ data
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ mq_pvc_name }}"
+        namespace: "{{ mq_namespace }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+          app: "{{ mq_app_label }}"
+      spec:
+        accessModes:
+          - "{{ mq_access_mode }}"
+        resources:
+          requests:
+            storage: "{{ mq_storage_size }}"
+        {% if mq_storage_class != "" %}
+        storageClassName: "{{ mq_storage_class }}"
+        {% endif %}
+  register: pvc_result
+  tags:
+    - pvc
+    - storage
+
+- name: Wait for PVC to be bound
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    name: "{{ mq_pvc_name }}"
+    namespace: "{{ mq_namespace }}"
+  register: pvc_status
+  until: 
+    - pvc_status.resources is defined
+    - pvc_status.resources | length > 0
+    - pvc_status.resources[0].status is defined
+    - pvc_status.resources[0].status.phase is defined
+    - pvc_status.resources[0].status.phase == "Bound"
+  retries: 10
+  delay: 5
+  when: pvc_result.changed
+  tags:
+    - pvc
+    - storage
+
+- name: Display PVC information
+  ansible.builtin.debug:
+    msg: 
+      - "PVC Name: {{ mq_pvc_name }}"
+      - "Status: {{ pvc_status.resources[0].status.phase | default('Unknown') }}"
+      - "Storage: {{ mq_storage_size }}"
+      - "Access Mode: {{ mq_access_mode }}"
+      - "Storage Class: {{ mq_storage_class | default('default') }}"
+  when: 
+    - pvc_status.resources is defined
+    - pvc_status.resources | length > 0
+  tags:
+    - pvc
+    - storage
+
+# Made with Bob

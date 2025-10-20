@@ -1,0 +1,29 @@
+---
+# handlers/main.yml
+#
+# Handlers for mq-ocp role
+#
+# This file defines handlers that can be notified by tasks.
+# Handlers are only run once at the end of the play, even if notified multiple times.
+
+- name: Restart IBM MQ pod
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ mq_namespace }}"
+    label_selectors:
+      - app={{ mq_app_label }}
+  when: mq_allow_pod_restart | default(false) | bool
+
+- name: Display MQ web console URL
+  ansible.builtin.debug:
+    msg: "MQ web console URL: https://{{ route_result.result.spec.host }}"
+  when: 
+    - mq_expose_web_console | bool
+    - route_result is defined
+    - route_result.result is defined
+    - route_result.result.spec is defined
+    - route_result.result.spec.host is defined
+
+# Made with Bob
