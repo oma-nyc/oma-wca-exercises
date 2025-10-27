@@ -1,0 +1,1 @@
+Deploy a kubernetes application in a namespace called testing. Create a service object using http 8080, a service account object called ansible-user, and a secret object called mySecret. Link the secret object to the service account object. Create a Deployment object by reading the definition from a local file.

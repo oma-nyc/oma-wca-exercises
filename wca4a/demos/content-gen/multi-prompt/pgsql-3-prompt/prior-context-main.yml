@@ -1,0 +1,42 @@
+---
+- name: Configure Database servers
+  hosts: all
+  become: true
+
+  vars:
+    pgadmin_podman_container:
+      name: pgadmin
+      image: docker.io/dpage/pgadmin4:8.12
+      state: started
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+      env:
+        PGADMIN_DEFAULT_EMAIL: student@example.com
+        PGADMIN_DEFAULT_PASSWORD: learn_ansible
+      ports:
+        - 8083:80
+      log_options:
+        max_size: 10
+  tasks:
+
+    # Install postgresql-server & Do initial postgresql-server config using postgresql-setup & Start and enable postgresql service
+    - name: Install postgresql-server
+      ansible.builtin.package:
+        name: postgresql-server
+        state: present
+
+    - name: Do initial postgresql-server config using postgresql-setup
+      ansible.builtin.command: postgresql-setup --initdb
+      become: true
+      become_user: postgres
+
+    - name: Start and enable postgresql service
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+
+
+
+

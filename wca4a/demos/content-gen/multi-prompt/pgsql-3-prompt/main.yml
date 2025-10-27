@@ -1,0 +1,22 @@
+ # Do initial postgresql config using postgresql-setup & start the service & allow the traffic through the firewall
+ - name: Do initial postgresql config using postgresql-setup
+   ansible.builtin.command: postgresql-setup initdb
+   become: true
+   become_user: postgres
+   when: postgresql_version.stdout is version('9.3', '<')
+
+ - name: Start the service
+   ansible.builtin.service:
+     name: postgresql
+     state: started
+     enabled: true
+
+ - name: Allow the traffic through the firewall
+   ansible.posix.firewalld:
+     port: "{{ _port_ }}"
+     permanent: true
+     state: enabled
+     immediate: true
+   when: postgresql_port != 5432
+
+

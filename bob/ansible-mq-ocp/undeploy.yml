@@ -1,0 +1,141 @@
+---
+# undeploy.yml
+#
+# Playbook for undeploying IBM MQ from OpenShift
+#
+# This playbook removes all resources created by the mq-ocp role.
+#
+# Usage:
+#   ansible-playbook undeploy.yml -e "mq_namespace=mq-prod"
+#
+# Author: Your Team
+# Last Updated: 2025-10-20
+
+- name: Undeploy IBM MQ from OpenShift
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    mq_namespace: "mq-prod"  # Default namespace, can be overridden
+    mq_deployment_name: "mq-deployment"
+    mq_service_name: "mq-service"
+    mq_route_name: "mq-route"
+    mq_pvc_name: "mq-data-pvc"
+    mq_config_map_name: "mq-config"
+    mq_admin_secret_name: "mq-admin-secret"
+    mq_service_account: "mq-service-account"
+    mq_role_name: "mq-role"
+    mq_role_binding_name: "mq-role-binding"
+    mq_scc_name: "mq-scc"
+    
+  tasks:
+    - name: Verify OpenShift login status
+      ansible.builtin.command: oc whoami
+      register: oc_whoami
+      changed_when: false
+      failed_when: oc_whoami.rc != 0
+      
+    - name: Delete IBM MQ route
+      kubernetes.core.k8s:
+        state: absent
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: "{{ mq_route_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ service
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Service
+        name: "{{ mq_service_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ deployment
+      kubernetes.core.k8s:
+        state: absent
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ mq_deployment_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ config map
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: ConfigMap
+        name: "{{ mq_config_map_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ admin secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        name: "{{ mq_admin_secret_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ role binding
+      kubernetes.core.k8s:
+        state: absent
+        api_version: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        name: "{{ mq_role_binding_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ role
+      kubernetes.core.k8s:
+        state: absent
+        api_version: rbac.authorization.k8s.io/v1
+        kind: Role
+        name: "{{ mq_role_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ service account
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: ServiceAccount
+        name: "{{ mq_service_account }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ security context constraints
+      kubernetes.core.k8s:
+        state: absent
+        api_version: security.openshift.io/v1
+        kind: SecurityContextConstraints
+        name: "{{ mq_scc_name }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ persistent volume claim
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: PersistentVolumeClaim
+        name: "{{ mq_pvc_name }}"
+        namespace: "{{ mq_namespace }}"
+      ignore_errors: true
+      
+    - name: Delete IBM MQ namespace (if empty)
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ mq_namespace }}"
+      when: mq_delete_namespace | default(false) | bool
+      ignore_errors: true
+      
+    - name: Display undeployment results
+      ansible.builtin.debug:
+        msg: "IBM MQ resources have been removed from namespace {{ mq_namespace }}"
+
+# Made with Bob

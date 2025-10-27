@@ -1,0 +1,12 @@
+---
+- name: install latest version of postrgresql
+
+- name: enable postgresql to start at boot
+
+- name: create a new postgres user called "tester"
+
+- name: create an empty database called test_data
+
+- name: copy sample sql dataset
+
+- name: populate the database with the dataset

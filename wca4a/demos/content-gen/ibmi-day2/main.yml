@@ -1,0 +1,7 @@
+---
+- name: IBM i Day 2 Operations Functions
+  hosts: all
+  collections: ibm.power_ibmi
+  tasks:
+
+  - name: Query the VIOS level of all IBM i servers

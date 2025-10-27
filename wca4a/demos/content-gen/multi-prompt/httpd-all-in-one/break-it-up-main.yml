@@ -1,0 +1,88 @@
+---
+- name: HTTPD Install / Config / Deploy
+  hosts: httpservers
+  become: true
+
+  tasks:
+    - name: Create /ibmdata/htdocs directory root:root
+      ansible.builtin.file:
+        path: /ibmdata/htdocs
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    # Create /ibmdata/htdocs directory root:root & Install apache httpd & Configure seport to listen on tcp 8080 and 8443 using community.general.seport & Enable httpd to start at boot & Open firewall ports 8080 and 8443 & Create /var/log/httpd directory owned by root:root with 0750 permissions & Create httpd.conf from a template and save as /etc/httpd/conf/httpd.conf & Start httpd & Create index.html from a template and save it as /ibmdata/htdocs/index.html owned by apache:apache & Set SELinux to Permissive
+    - name: Install apache httpd
+      ansible.builtin.file:
+        path: /ibmdata/htdocs
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Configure seport to listen on tcp 8080 and 8443 using community.general.seport
+      ansible.builtin.package:
+        name: httpd
+        state: present
+
+    - name: Enable httpd to start at boot
+      community.general.seport:
+        ports:
+          - 8080
+          - 8443
+        proto: tcp
+        setype: http_port_t
+        state: present
+
+    - name: Open firewall ports 8080 and 8443
+      ansible.builtin.service:
+        name: httpd
+        enabled: true
+
+    - name: Create /var/log/httpd directory owned by root:root with 0750 permissions
+      ansible.posix.firewalld:
+        port: '{{ item }}/tcp'
+        permanent: true
+        state: enabled
+        immediate: true
+      loop:
+        - 8080
+        - 8443
+
+    - name: Create httpd.conf from a template and save as /etc/httpd/conf/httpd.conf
+      ansible.builtin.file:
+        path: /var/log/httpd
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+
+    - name: Start httpd
+      ansible.builtin.template:
+        src: httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create index.html from a template and save it as /ibmdata/htdocs/index.html
+        owned by apache:apache
+      ansible.builtin.service:
+        name: httpd
+        state: started
+
+    - name: Set SELinux to Permissive
+      ansible.builtin.template:
+        src: index.html.j2
+        dest: /ibmdata/htdocs/index.html
+        owner: apache
+        group: apache
+        mode: '0644'
+
+    - name: Set selinux to permissive
+      ansible.posix.selinux:
+        policy: targeted
+        state: permissive
+
+    

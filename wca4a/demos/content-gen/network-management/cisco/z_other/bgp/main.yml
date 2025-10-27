@@ -1,0 +1,5 @@
+---
+
+- name: Create a bpg neighbor {{ _neighbor_address_ }} on a nxos device
+
+- name: Create a bgp neighbor 10.10.10.1 on a nxos device

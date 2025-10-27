@@ -1,0 +1,197 @@
+---
+# tasks/vault.yml
+#
+# Hashicorp Vault integration for mq-ocp role
+#
+# This file implements the integration with Hashicorp Vault for secure credential management.
+# It retrieves credentials from Vault and creates OpenShift secrets for IBM MQ.
+
+- name: Verify Vault configuration
+  ansible.builtin.assert:
+    that:
+      - vault_addr is defined
+      - vault_auth_method is defined
+      - vault_secret_path is defined
+      - (vault_auth_method == 'token' and vault_token is defined) or
+        (vault_auth_method == 'approle' and vault_role_id is defined and vault_secret_id is defined) or
+        (vault_auth_method == 'kubernetes' and vault_role is defined)
+    fail_msg: "Missing required Vault configuration parameters for auth method: {{ vault_auth_method }}"
+    success_msg: "Vault configuration parameters validated"
+  tags:
+    - vault
+    - security
+
+- name: Set Vault connection parameters based on auth method
+  ansible.builtin.set_fact:
+    vault_connection_params:
+      url: "{{ vault_addr }}"
+      auth_method: "{{ vault_auth_method }}"
+      token: "{{ vault_token | default(omit) }}"
+      role_id: "{{ vault_role_id | default(omit) }}"
+      secret_id: "{{ vault_secret_id | default(omit) }}"
+      role: "{{ vault_role | default(omit) }}"
+      mount_point: "{{ vault_auth_mount_point | default(omit) }}"
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Test Vault connectivity
+  community.hashi_vault.vault_read:
+    url: "{{ vault_addr }}"
+    auth_method: "{{ vault_auth_method }}"
+    token: "{{ vault_token | default(omit) }}"
+    role_id: "{{ vault_role_id | default(omit) }}"
+    secret_id: "{{ vault_secret_id | default(omit) }}"
+    role: "{{ vault_role | default(omit) }}"
+    mount_point: "{{ vault_auth_mount_point | default(omit) }}"
+    path: sys/health
+  register: vault_health
+  failed_when: vault_health.status != 200
+  tags:
+    - vault
+    - security
+
+- name: Retrieve MQ admin password from Vault
+  community.hashi_vault.vault_read:
+    url: "{{ vault_connection_params.url }}"
+    auth_method: "{{ vault_connection_params.auth_method }}"
+    token: "{{ vault_connection_params.token | default(omit) }}"
+    role_id: "{{ vault_connection_params.role_id | default(omit) }}"
+    secret_id: "{{ vault_connection_params.secret_id | default(omit) }}"
+    role: "{{ vault_connection_params.role | default(omit) }}"
+    mount_point: "{{ vault_connection_params.mount_point | default(omit) }}"
+    path: "{{ vault_secret_path }}/{{ mq_admin_password_path | default('mq-admin-password') }}"
+  register: mq_admin_password_secret
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Set MQ admin password fact
+  ansible.builtin.set_fact:
+    mq_admin_password: "{{ mq_admin_password_secret.data.data.password }}"
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Retrieve MQ app password from Vault
+  community.hashi_vault.vault_read:
+    url: "{{ vault_connection_params.url }}"
+    auth_method: "{{ vault_connection_params.auth_method }}"
+    token: "{{ vault_connection_params.token | default(omit) }}"
+    role_id: "{{ vault_connection_params.role_id | default(omit) }}"
+    secret_id: "{{ vault_connection_params.secret_id | default(omit) }}"
+    role: "{{ vault_connection_params.role | default(omit) }}"
+    mount_point: "{{ vault_connection_params.mount_point | default(omit) }}"
+    path: "{{ vault_secret_path }}/{{ mq_app_password_path | default('mq-app-password') }}"
+  register: mq_app_password_secret
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Set MQ app password fact
+  ansible.builtin.set_fact:
+    mq_app_password: "{{ mq_app_password_secret.data.data.password }}"
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Retrieve MQ TLS certificate from Vault (if enabled)
+  community.hashi_vault.vault_read:
+    url: "{{ vault_connection_params.url }}"
+    auth_method: "{{ vault_connection_params.auth_method }}"
+    token: "{{ vault_connection_params.token | default(omit) }}"
+    role_id: "{{ vault_connection_params.role_id | default(omit) }}"
+    secret_id: "{{ vault_connection_params.secret_id | default(omit) }}"
+    role: "{{ vault_connection_params.role | default(omit) }}"
+    mount_point: "{{ vault_connection_params.mount_point | default(omit) }}"
+    path: "{{ vault_secret_path }}/{{ mq_tls_cert_path | default('mq-tls-cert') }}"
+  register: mq_tls_cert_secret
+  no_log: true
+  when: mq_enable_tls | default(false) | bool
+  tags:
+    - vault
+    - security
+    - tls
+
+- name: Set MQ TLS certificate fact
+  ansible.builtin.set_fact:
+    mq_tls_cert: "{{ mq_tls_cert_secret.data.data.certificate }}"
+    mq_tls_key: "{{ mq_tls_cert_secret.data.data.private_key }}"
+  no_log: true
+  when: mq_enable_tls | default(false) | bool and mq_tls_cert_secret is defined
+  tags:
+    - vault
+    - security
+    - tls
+
+- name: Create MQ admin password secret in OpenShift
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ mq_admin_secret_name }}"
+        namespace: "{{ mq_namespace }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+      type: Opaque
+      stringData:
+        password: "{{ mq_admin_password }}"
+  no_log: true
+  tags:
+    - vault
+    - security
+
+- name: Create MQ TLS secret in OpenShift (if enabled)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ mq_tls_secret_name | default('mq-tls-secret') }}"
+        namespace: "{{ mq_namespace }}"
+        labels:
+          app.kubernetes.io/name: ibm-mq
+          app.kubernetes.io/managed-by: ansible
+      type: kubernetes.io/tls
+      stringData:
+        tls.crt: "{{ mq_tls_cert }}"
+        tls.key: "{{ mq_tls_key }}"
+  no_log: true
+  when: mq_enable_tls | default(false) | bool and mq_tls_cert is defined and mq_tls_key is defined
+  tags:
+    - vault
+    - security
+    - tls
+
+- name: Handle Vault errors
+  ansible.builtin.fail:
+    msg: "Failed to retrieve secrets from Vault: {{ vault_error_message }}"
+  vars:
+    vault_error_message: >-
+      {% if mq_admin_password_secret is defined and mq_admin_password_secret.failed %}
+      Admin password: {{ mq_admin_password_secret.msg }}
+      {% elif mq_app_password_secret is defined and mq_app_password_secret.failed %}
+      App password: {{ mq_app_password_secret.msg }}
+      {% elif mq_tls_cert_secret is defined and mq_tls_cert_secret.failed %}
+      TLS certificate: {{ mq_tls_cert_secret.msg }}
+      {% else %}
+      Unknown error
+      {% endif %}
+  when: >-
+    (mq_admin_password_secret is defined and mq_admin_password_secret.failed) or
+    (mq_app_password_secret is defined and mq_app_password_secret.failed) or
+    (mq_enable_tls | default(false) | bool and mq_tls_cert_secret is defined and mq_tls_cert_secret.failed)
+  tags:
+    - vault
+    - security
+
+# Made with Bob

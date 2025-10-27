@@ -1,0 +1,209 @@
+---
+- hosts: kvmhosts
+  name: Update VM O/S 
+  gather_facts: no
+  become: true
+  
+ 
+  vars:
+
+     ip_shared_variable: "{{ hostvars['variable_holder']['hname'] }}"
+     ip: "{{ hostvars['variable_holder']['IPset'] }}" 
+     dist: "{{ hostvars['variable_holder']['distro'] }}"
+
+     pw: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          36353331393535663565636234363635376139643864303339376134643533666663386261313138
+          3339663666656566326431633833396364346634373139640a643161356364386264643961353566
+          63623931653862333262313138653437396261646334616665666132653564353731326336353764
+          3762396664623736330a323131346137323639626239663164663165323239653565376234353737
+          3930
+
+     pwa:  !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          62653831643666306439303762373935336430363731333166396537313564663230626534353062
+          6165376637313437346463353766323336326133383063390a316261306564656637393434353465
+          31313765326237343333323061646237643162313333316264356639643536613532393039306538
+          3334386432633765300a623932323164633064613031663437336131636162333939306433333564
+          3630
+
+  tasks:
+
+    - name: show
+      debug:
+        msg: system is {{ dist }}
+
+    - name: Update VM packages
+      tags: 
+      - Vedge
+      - RadioStarsDev
+      - Ubuntu
+      - Plano
+      - Centos
+      yum:
+       name: '*'
+       state: latest
+       update_cache: yes
+       update_only: yes
+      register: yum_update_status
+      when: 
+         - dist != "Ubuntu" or
+           dist != "Ubuntu-Plano"
+
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      register: apt_update_status
+      when: dist == "Ubuntu-Plano"    
+   
+
+    - name: Activate Cockpit
+      tags: 
+        - Vedge
+        - RadioStarsDev
+        - Ubuntu
+        - Plano
+        - Centos
+      ansible.builtin.shell:
+       cmd: sudo systemctl enable --now  cockpit.socket
+      register: Cockpit
+      when:
+        - web_interface == "Yes" 
+
+    - name: Docker install Prep RHEL and Rocky 9
+      tags: 
+      - Vedge
+      - Centos
+      yum:
+       name:
+        - yum-utils
+        - python3-pip
+       state: latest    
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky9"  
+          
+
+    - name: Docker install Prep Rocky
+      tags: Vedge
+      yum:
+       name:
+        - yum-utils
+       state: latest    
+      when:     
+        - dist == "TeamTwoRocky8" 
+
+    - name: Setup Docker repo 
+      tags: Vedge
+      become: true
+      ignore_errors: true
+      shell: |
+          sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 
+          sudo yum clean all
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Install Docker packages
+      tags: Vedge
+      become: true
+      yum:
+       name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose-plugin 
+       state: latest        
+      register: install
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+     
+    - name: Install Docker Module for Python
+      tags: Vedge
+      become: true
+      pip:
+       name: docker   
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Setup Docker
+      tags: Vedge 
+      become: true
+      shell: |
+        sudo groupadd docker
+        sudo usermod -aG docker kvm_user
+        sudo systemctl enable docker.service
+        sudo systemctl enable containerd.service      
+      when:
+        - dist == "TeamTwoRH8" or
+          dist == "TeamTwoRH9" or
+          dist == "TeamTwoRocky8" or
+          dist == "TeamTwoRocky9"
+
+    - name: Remove packages not needed anymore
+      tags: 
+      - Vedge
+      - Plano
+      - Ubuntu
+      - RadioStarsDev
+      - Centos
+      yum:
+       autoremove: yes 
+      when: 
+         - dist != "Ubuntu" or
+           dist != "Ubuntu-Plano"
+          
+   
+    - name: Add Admin user
+      tags:
+      - Vedge
+      - Ubuntu
+      - Plano
+      - RadioStarsDev
+      - Centos
+      ansible.builtin.user:
+        name: admin
+        groups: wheel
+
+    - name: Add Admin user
+      ansible.builtin.user:
+        name: admin
+        groups: sudo 
+      when: dist == "Ubuntu-Plano"     
+      
+
+    - name: Set password to admin user  
+      tags: 
+      - Vedge
+      - Ubuntu
+      - RadioStarsDev
+      - Centos
+      shell: echo admin:'{{ pwa }}' | sudo chpasswd      
+   
+    
+    - name: Set the hostname sames as VM name
+      tags: 
+      - Vedge
+      - RadioStarsDev
+      - Ubuntu
+      ansible.builtin.hostname:
+        name: "{{ ip_shared_variable }}"     
+     
+    - name: Reboot the new VM and wait for it to come back up.
+      tags: 
+      - Vedge
+      - Ubuntu
+      - RadioStarsDev
+      become: true
+      reboot:     
+     

@@ -1,0 +1,43 @@
+---
+- name: IBM Cloud VPC VSI Playbook
+  hosts: localhost
+  collections:
+    - ibm.cloudcollection
+  tasks:
+    - name: Fetch the variables from var file
+
+    - name: Check for existing VPCs
+
+    - name: Configure VPC without subnet
+
+    - name: Check for existing VPC subnet
+
+    - name: Configure VPC Subnet
+
+    - name: Check for existing SSH key
+
+    - name: Configure SSH key
+
+    - name: Retrieve image list
+    
+    - name: Set VM image name/id dictionary fact
+
+    - name: Check for existing VSI
+
+    - name: Configure VSI
+
+    - name: Check for existing Floating IP
+
+    - name: Configure Floating IP address
+  
+    - name: Print Floating IP address
+    
+    - name: Configure Security Group Rule to open SSH on the VSI
+  
+    - name: Add VSI to Ansible inventory
+
+    - name: Wait for Ansible Connection to new DEMO VSI
+
+    - name: Collect OS information from new DEMO VSI 
+
+    - name: Print OS information

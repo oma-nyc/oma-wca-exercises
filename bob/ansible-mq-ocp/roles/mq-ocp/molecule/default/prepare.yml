@@ -1,0 +1,68 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure OpenShift CLI is installed
+      ansible.builtin.command:
+        cmd: which oc
+      register: oc_check
+      changed_when: false
+      failed_when: oc_check.rc != 0
+      ignore_errors: true
+
+    - name: Display warning if OpenShift CLI is not installed
+      ansible.builtin.debug:
+        msg: "WARNING: OpenShift CLI (oc) is not installed. This may cause tests to fail."
+      when: oc_check.rc != 0
+
+    - name: Check OpenShift login status
+      ansible.builtin.command:
+        cmd: oc whoami
+      register: oc_whoami
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
+    - name: Display warning if not logged into OpenShift
+      ansible.builtin.debug:
+        msg: "WARNING: Not logged into OpenShift. Please login using 'oc login' before running tests."
+      when: oc_whoami.rc != 0
+
+    - name: Create mock Vault secrets for testing
+      ansible.builtin.set_fact:
+        vault_mock_secrets:
+          admin_password: "passw0rd"
+          app_password: "apppassw0rd"
+          tls_cert: |
+            -----BEGIN CERTIFICATE-----
+            MIIDazCCAlOgAwIBAgIUEMyk0muJmPh3KrsFUDXyXJyBU+kwDQYJKoZIhvcNAQEL
+            BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+            GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMzA0MTIwMDAwMDBaFw0yNDA0
+            MTEyMzU5NTlaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+            HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+            AQUAA4IBDwAwggEKAoIBAQDEuMBLQxMwjdgHc1t9VrpDVy9JJpcjJAFUYvAzPAM+
+            u2WEI1OLGGIXWJm4QlL3jyJithMGwLTB1GCJkM9UtVm0lXrjw1eCjL3UEGfHuyNQ
+            MOCK_CERTIFICATE_FOR_TESTING_ONLY
+            -----END CERTIFICATE-----
+          tls_key: |
+            -----BEGIN PRIVATE KEY-----
+            MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDEuMBLQxMwjdgH
+            c1t9VrpDVy9JJpcjJAFUYvAzPAM+u2WEI1OLGGIXWJm4QlL3jyJithMGwLTB1GCJ
+            MOCK_PRIVATE_KEY_FOR_TESTING_ONLY
+            -----END PRIVATE KEY-----
+
+    - name: Create test namespace if it doesn't exist
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: "{{ mq_namespace | default('mq-test') }}"
+        state: present
+      register: namespace_result
+      ignore_errors: true
+
+    - name: Display namespace creation result
+      ansible.builtin.debug:
+        msg: "Namespace {{ mq_namespace | default('mq-test') }} {{ 'created' if namespace_result.changed else 'already exists' }}"
+      when: namespace_result is defined
+
+# Made with Bob

@@ -1,0 +1,11 @@
+# inventory/production/hosts
+#
+# Production inventory file for IBM MQ on OpenShift deployment
+#
+# This file defines the hosts for the production deployment.
+
+[local]
+localhost ansible_connection=local
+
+[all:vars]
+ansible_python_interpreter=auto
