@@ -1,0 +1,11 @@
+---
+- name: Manage PDS
+  hosts: zos_host
+  gather_facts: false
+  collections:
+    - ibm.ibm_zos_core
+
+  tasks:
+    - name: Create a PDS with IEFBR14
+
+    - name: Copy the PDS to a new customized PDS

@@ -1,0 +1,78 @@
+---
+# meta/main.yml
+#
+# Metadata for the mq-ocp role
+#
+# This file contains metadata about the role for Ansible Galaxy and users.
+# It includes information about dependencies, supported platforms, and other details.
+
+galaxy_info:
+  role_name: mq_ocp
+  namespace: ibm
+  author: Your Team
+  description: Ansible role for deploying IBM MQ on OpenShift with Hashicorp Vault integration
+  company: Your Company
+  
+  # License of this role
+  license: MIT
+  
+  # Minimum Ansible version required
+  min_ansible_version: 2.10
+  
+  # Platforms supported by this role
+  platforms:
+    - name: EL  # Enterprise Linux
+      versions:
+        - 8
+        - 9
+    - name: Fedora
+      versions:
+        - 36
+        - 37
+        - 38
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+  
+  # Galaxy tags for categorizing the role
+  galaxy_tags:
+    - ibm
+    - mq
+    - messaging
+    - queue
+    - openshift
+    - kubernetes
+    - container
+    - vault
+    - security
+  
+  # Role dependencies
+dependencies:
+  # List your role dependencies here, if any
+  # Example:
+  # - role: community.kubernetes.k8s
+  []
+
+# Collections required by this role
+collections:
+  - kubernetes.core
+  - community.hashi_vault
+  - community.general
+  - ansible.posix
+
+# Provide information about the repository
+repository: https://github.com/your-org/ansible-role-mq-ocp
+documentation: https://github.com/your-org/ansible-role-mq-ocp/blob/main/README.md
+homepage: https://github.com/your-org/ansible-role-mq-ocp
+issues: https://github.com/your-org/ansible-role-mq-ocp/issues
+
+# Role maturity level
+# Options: experimental, stable, deprecated
+maturity: stable
+
+# Role tier level
+# Options: free, silver, gold
+tier: free
+
+# Made with Bob

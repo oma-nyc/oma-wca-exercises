@@ -1,0 +1,30 @@
+---
+# Test playbook for mq-ocp role
+#
+# This playbook tests the mq-ocp role with default settings.
+# It can be used for local testing during development.
+
+- name: Test IBM MQ on OpenShift role
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # OpenShift connection
+    openshift_version: "4.18"
+    
+    # Vault configuration
+    vault_addr: "https://vault.example.com:8200"
+    vault_auth_method: "token"
+    vault_token: "hvs.example_token"  # Use a test token for testing
+    vault_secret_path: "secret/test/mq"
+    
+    # Test-specific variables
+    mq_namespace: "mq-test"
+    mq_qmgr_name: "TESTQM"
+    mq_create_test_queue: true
+    mq_cleanup_test_queue: true
+    
+  roles:
+    - role: ../..  # Path to the mq-ocp role
+
+# Made with Bob

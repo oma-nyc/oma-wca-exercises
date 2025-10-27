@@ -1,0 +1,60 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: molecule/default/requirements.yml
+driver:
+  name: delegated
+  options:
+    managed: false
+    ansible_connection_options:
+      ansible_connection: local
+platforms:
+  - name: instance
+    image: localhost/molecule:latest
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: ../../roles
+  config_options:
+    defaults:
+      callbacks_enabled: ansible.posix.profile_tasks
+      timeout: 180
+  inventory:
+    host_vars:
+      instance:
+        ansible_python_interpreter: /usr/bin/python3
+        ansible_connection: local
+        # Production-specific variables
+        mq_namespace: "mq-prod"
+        mq_replicas: 3
+        mq_cpu_request: "1"
+        mq_memory_request: "1Gi"
+        mq_cpu_limit: "2"
+        mq_memory_limit: "2Gi"
+        mq_storage_size: "10Gi"
+        mq_validate_deployment: true
+verifier:
+  name: ansible
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+scenario:
+  name: production
+  test_sequence:
+    - dependency
+    - lint
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy
+
+# Made with Bob

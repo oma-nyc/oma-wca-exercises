@@ -1,0 +1,19 @@
+---
+- name: F5 BIG-IP Playbook - create a pool, pool members, and VIP
+  hosts: all
+  connection: local
+
+  vars:
+    provider:
+      password: admin
+      server: 10.10.10.1
+      user: admin
+      validate_certs: false
+      server_port: 443
+
+  tasks:
+    - name: Create a pool named web
+
+    - name: Add member to pool 10.10.10.10 web01
+
+    - name: Create a VIP vip-1 with profiles http and clientssl

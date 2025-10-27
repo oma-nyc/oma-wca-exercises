@@ -1,0 +1,45 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Include mq-ocp role"
+      include_role:
+        name: "mq-ocp"
+      vars:
+        # Minimal configuration
+        mq_namespace: "mq-minimal"
+        mq_qmgr_name: "MINQM"
+        mq_replicas: 1
+        
+        # Minimal resource configuration
+        mq_cpu_request: "100m"
+        mq_memory_request: "256Mi"
+        mq_cpu_limit: "200m"
+        mq_memory_limit: "512Mi"
+        mq_storage_size: "1Gi"
+        
+        # Disable optional features
+        mq_expose_web_console: false
+        mq_expose_mq_port: false
+        mq_enable_tls: false
+        mq_enable_security_hardening: false
+        mq_enable_network_policies: false
+        mq_enable_pod_security: false
+        mq_create_test_queue: false
+        
+        # Mock credentials for testing
+        mq_admin_user: "admin"
+        mq_admin_password: "passw0rd"
+        mq_app_user: "app"
+        mq_app_password: "apppassw0rd"
+        
+        # Skip Vault integration
+        vault_enabled: false
+        
+        # Basic validation
+        mq_validate_deployment: true
+        mq_validation_retries: 5
+        mq_validation_delay: 10
+
+# Made with Bob

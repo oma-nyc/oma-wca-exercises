@@ -1,0 +1,26 @@
+---
+- name: Initial Router Setup
+  hosts: sros_devices
+  connection: netconf
+
+  collections: 
+    - community.network
+    - ansible.netcommon
+
+  vars:
+    ansible_ssh_user: netconf
+    ansible_ssh_pass: nokia123
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+    ansible_connection: ansible.netcommon.netconf
+    ansible_network_os: <network-os>
+    ansible_host_key_auto_add: yes
+    ansible_host_key_checking: False
+
+  tasks:
+    - name: Configure network devices using restconf
+    
+    
+
+
+
+    

@@ -1,0 +1,27 @@
+---
+- name: VLANs Playbook
+  hosts: nxosdevices
+  tasks:
+    - name: Create a vlan named Vlan100 on a cisco nxos device
+      # Content entered manually
+      cisco.nxos.nxos_vlans:
+        config:
+          - vlan_id: 100
+            name: vlan100
+        state: merged
+
+    - name: Create a vlan named Vlan101 on a cisco nxos device
+      # Content suggestion provided by Ansible Lightspeed
+      cisco.nxos.nxos_vlans:
+        config:
+          - vlan_id: 101
+            name: vlan101
+        state: merged
+
+    - name: Delete vlan100 on a cisco nxos device
+      # Content suggestion provided by Ansible Lightspeed
+      cisco.nxos.nxos_vlans:
+        config:
+          - vlan_id: 100
+            name: vlan100
+        state: deleted

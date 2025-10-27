@@ -1,0 +1,357 @@
+>>> /load granite-code:20b
+Loading model 'granite-code:20b'
+>>> /set parameter num_ctx 8092
+Set parameter 'num_ctx' to '8092'
+>>> System: You are an ansible engineer. Question: Write an Ansible playbook th
+... at deploys IBM MQ on OpenShift with an exposed route.
+Here is a sample Ansible playbook to deploy IBM MQ on OpenShift with an
+exposed route:
+
+    - name: Deploy IBM MQ on OpenShift
+      hosts: localhost
+      tasks:
+        - name: Create project
+          oc_project:
+            state: present
+            name: ibm-mq
+
+        - name: Deploy IBM MQ operator
+          k8s:
+            state: present
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ibm-mq-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: ibm-mq-operator
+                template:
+                  metadata:
+                    labels:
+                      app: ibm-mq-operator
+                  spec:
+                    containers:
+                    - name: ibm-mq-operator
+                      image: quay.io/ibm-messaging/mq-operator:latest
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_IMAGE
+                        value: quay.io/ibm-messaging/mq-operator:latest
+
+        - name: Create IBM MQ custom resource
+          k8s:
+            state: present
+            definition:
+              apiVersion: mq.ibm.com/v1beta1
+              kind: QueueManager
+              metadata:
+                name: myqueuemanager
+              spec:
+                license:
+                  accept: true
+                  license: L-RJON-BGHDJG
+                queueManager:
+                  name: myqueuemanager
+                template:
+                  pod:
+                    containers:
+                    - image: ibmcom/mq:latest
+                      name: qm
+                      env:
+                      - name: LICENSE
+                        value: accept
+                      - name: QMGR_NAME
+                        value: myqueuemanager
+                      ports:
+                      - containerPort: 1410
+                        name: amqps
+                        protocol: TCP
+                      - containerPort: 9443
+                        name: mqtls
+                        protocol: TCP
+                      volumeMounts:
+                      - mountPath: /var/mqm
+                        name: mqm-volume
+                    volumes:
+                    - emptyDir: {}
+                      name: mqm-volume
+
+        - name: Expose IBM MQ route
+          k8s:
+            state: present
+            definition:
+              apiVersion: route.openshift.io/v1
+              kind: Route
+              metadata:
+                name: ibm-mq-route
+              spec:
+                to:
+                  kind: Service
+                  name: myqueuemanager
+                port:
+                  targetPort: amqps
+
+This playbook first creates a project named "ibm-mq" and deploys the IBM
+MQ operator using a Kubernetes deployment object. Then, it creates an IBM
+MQ custom resource using a Kubernetes object. Finally, it exposes the IBM
+MQ route using a Kubernetes Route object.
+
+>>> Question: Recommend ways to parameterize this playbook.
+There are multiple ways to parameterize this playbook, such as:
+
+1. Use variables in the playbook's inventory file or extra-vars file to
+specify the project name, operator image, queue manager name, etc.
+
+2. Use Jinja templates to dynamically generate the Kubernetes objects
+based on certain parameters. For example, you could create a template for
+the IBM MQ custom resource and use a Jinja template variable to set the
+queue manager name.
+
+3. Use Ansible roles to modularize and parameterize the playbook tasks.
+This allows you to define reusable roles that can be customized with
+different parameters.
+
+Overall, there are multiple ways to achieve parameterization in Ansible
+playbooks, depending on your specific requirements and preferences.
+
+>>> Write the same playbook using recommended parameters.
+Here's an example of how we could modify the previous playbook to use
+variables for some of its parameters:
+
+    - name: Deploy IBM MQ on OpenShift
+      hosts: localhost
+      vars:
+        project_name: ibm-mq
+        operator_image: quay.io/ibm-messaging/mq-operator:latest
+        queue_manager_name: myqueuemanager
+      tasks:
+        - name: Create project
+          oc_project:
+            state: present
+            name: "{{ project_name }}"
+
+        - name: Deploy IBM MQ operator
+          k8s:
+            state: present
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ibm-mq-operator
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: ibm-mq-operator
+                template:
+                  metadata:
+                    labels:
+                      app: ibm-mq-operator
+                  spec:
+                    containers:
+                    - name: ibm-mq-operator
+                      image: "{{ operator_image }}"
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: OPERATOR_IMAGE
+                        value: "{{ operator_image }}"
+
+        - name: Create IBM MQ custom resource
+          k8s:
+            state: present
+            definition:
+              apiVersion: mq.ibm.com/v1beta1
+              kind: QueueManager
+              metadata:
+                name: "{{ queue_manager_name }}"
+              spec:
+                license:
+                  accept: true
+                  license: L-RJON-BGHDJG
+                queueManager:
+                  name: "{{ queue_manager_name }}"
+                template:
+                  pod:
+                    containers:
+                    - image: ibmcom/mq:latest
+                      name: qm
+                      env:
+                      - name: LICENSE
+                        value: accept
+                      - name: QMGR_NAME
+                        value: "{{ queue_manager_name }}"
+                      ports:
+                      - containerPort: 1410
+                        name: amqps
+                        protocol: TCP
+                      - containerPort: 9443
+                        name: mqtls
+                        protocol: TCP
+                      volumeMounts:
+                      - mountPath: /var/mqm
+                        name: mqm-volume
+                    volumes:
+                    - emptyDir: {}
+                      name: mqm-volume
+
+        - name: Expose IBM MQ route
+          k8s:
+            state: present
+            definition:
+              apiVersion: route.openshift.io/v1
+              kind: Route
+              metadata:
+                name: ibm-mq-route
+              spec:
+                to:
+                  kind: Service
+                  name: "{{ queue_manager_name }}"
+                port:
+                  targetPort: amqps
+
+In this version, we've defined variables for the project name, operator
+image, and queue manager name. These variables can be set in a playbook
+inventory file or extra-vars file, allowing you to customize the
+deployment without modifying the playbook code itself. We've also used
+Jinja templates to dynamically generate thequeue manager name in the
+custom resource definition.
+
+>>> Write defaults/main.yml with the default values for use in an Ansible role.
+...
+Here's an example of how we could create adefaults/main.yml file for an
+Ansible role that deploys IBM MQ on OpenShift:
+
+    ---
+    project_name: ibm-mq
+    operator_image: quay.io/ibm-messaging/mq-operator:latest
+    queue_manager_name: myqueuemanager
+
+This file defines default values for the project name, operator image,
+and queue manager name that can be used by any playbook or role that
+includes this role. For example, if you want to deploy IBM MQ with a
+different project name, you can set theproject_name variable in your
+playbook or inventory file:
+
+    ---
+    - hosts: localhost
+      roles:
+        - ibm_mq
+      vars:
+        project_name: my-other-project
+
+>>> Write meta/main.yml with the metadata for use in an Ansible role.
+Here's an example of how we could create a meta/main.yml file for an
+Ansible role that deploys IBM MQ on OpenShift:
+
+    ---
+    galaxy_info:
+      author: John Doe
+      description: Deploy IBM MQ on OpenShift
+      license: MIT
+      min_ansible_version: 2.10
+
+    dependencies: []
+
+This file contains metadata about the role, such as the author,
+description, license, and minimum Ansible version required. It also lists
+any dependencies that this role has.
+
+>>> Write README.md with the summary, prerequisites, additional ansible collect
+... ions, task explanations, variable explanations, license, and author informa
+... tion for use in an Ansible role.
+Here's an example of how we could create a README.md file for an Ansible
+role that deploys IBM MQ on OpenShift:
+
+    # IBM MQ deployment on OpenShift
+    Deploy IBM MQ on OpenShift with this Ansible role.
+
+    ## Summary
+
+    This Ansible role installs and configures IBM MQ on Red Hat OpenShift
+Container Platform. It creates the necessary custom resource definitions
+and templates for deploying IBM MQ using the operator-sdk tool. The role
+can be used to deploy IBM MQ in a development or production environment.
+
+    ## Prerequisites
+
+    1. OpenShift Container Platform 4.6 or later
+    2. Ansible 2.10 or later
+
+    ## Additional ansible collections
+
+    - ibm.cloud collection: https://galaxy.ansible.com/ibm/cloud
+
+    ## Task explanations
+
+    - Create project: Creates a new OpenShift project for deploying IBM
+MQ.
+    - Deploy IBM MQ operator: Deploys the IBM MQ operator from the
+quay.io container registry.
+    - Create IBM MQ custom resource: Creates an IBM MQ custom resource
+using the Kubernetes API. This defines the queue manager and its
+configuration.
+    - Expose IBM MQ route: Exposes the IBM MQ queue manager as a route,
+which can be used to access it externally.
+
+    ## Variable explanations
+
+    - project_name: The name of the OpenShift project to deploy IBM MQ
+into (default: ibm-mq).
+    - operator_image: The container image for the IBM MQ operator
+(default: quay.io/ibm-messaging/mq-operator:latest).
+    - queue_manager_name: The name of the IBM MQ queue manager to create
+(default: myqueuemanager).
+
+    ## License
+
+    This project is licensed under the Apache License, Version 2.0. See
+the LICENSE file for more information.
+
+    ## Author Information
+
+    This role was created by John Doe, you can find me on Twitter @johndoe
+
+>>> /show info
+  Model
+  	arch            	starcoder
+  	parameters      	20.1B
+  	quantization    	Q4_0
+  	context length  	8192
+  	embedding length	6144
+
+  Parameters
+  	stop	"System:"
+  	stop	"Question:"
+  	stop	"Answer:"
+
+  License
+  	Apache License
+  	Version 2.0, January 2004
+
+>>> /show
+Available Commands:
+  /show info         Show details for this model
+  /show license      Show model license
+  /show modelfile    Show Modelfile for this model
+  /show parameters   Show parameters for this model
+  /show system       Show system message
+  /show template     Show prompt template
+
+>>> /bye

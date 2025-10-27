@@ -1,0 +1,65 @@
+---
+- name: Deploy IBM MQ on OpenShift 4 with an exposed route
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Deploy IBM MQ on OpenShift 4 with an exposed route
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ibm-mq-dev
+            labels:
+              app: ibm-mq
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ibm-mq
+            template:
+              metadata:
+                labels:
+                  app: ibm-mq
+              spec:
+                containers:
+                  - name: ibm-mq
+                    image: ibmmq/mq:latest
+                    ports:
+                      - containerPort: 1414
+                    env:
+                      - name: LICENSE
+                        value: accept-secure
+                      - name: MQ_QMGR_NAME
+                        value: QM1
+                      - name: MQ_ADMIN_PASSWORD
+                        value: P@ssw0rd
+                    volumeMounts:
+                      - mountPath: /var/mqm
+                        name: mq-data
+                volumes:
+                  - name: mq-data
+                    emptyDir: {}
+                restartPolicy: Always
+            strategy:
+              type: RollingUpdate
+    - name: Expose the IBM MQ service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ibm-mq-dev-svc
+            labels:
+              app: ibm-mq
+          spec:
+            type: NodePort
+            selector:
+              app: ibm-mq
+            ports:
+              - protocol: TCP
+                port: 1414
+                targetPort: 1414
+                nodePort: 30001
